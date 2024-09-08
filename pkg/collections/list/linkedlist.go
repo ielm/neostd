@@ -87,6 +87,86 @@ func (l *LinkedList[T]) AddAfter(node *Node[T], item T) *Node[T] {
 	return newNode
 }
 
+// MoveToFront moves the first occurrence of the specified item to the front of the list.
+func (l *LinkedList[T]) MoveToFront(item T) bool {
+	if l.comparator == nil {
+		panic("comparator not set for non-comparable type")
+	}
+
+	current := l.head
+	for current != nil {
+		if l.comparator(current.value, item) == 0 {
+			l.MoveNodeToFront(current)
+			return true
+		}
+		current = current.next
+	}
+	return false
+}
+
+// MoveNodeToFront moves the specified node to the front of the list.
+func (l *LinkedList[T]) MoveNodeToFront(node *Node[T]) {
+	if node == nil || node == l.head {
+		return
+	}
+
+	// Remove the node from its current position
+	if node.prev != nil {
+		node.prev.next = node.next
+	}
+	if node.next != nil {
+		node.next.prev = node.prev
+	} else {
+		l.tail = node.prev // Update tail if moving the last node
+	}
+
+	// Move the node to the front
+	node.prev = nil
+	node.next = l.head
+	l.head.prev = node
+	l.head = node
+}
+
+// MoveToEnd moves the first occurrence of the specified item to the end of the list.
+func (l *LinkedList[T]) MoveToEnd(item T) bool {
+	if l.comparator == nil {
+		panic("comparator not set for non-comparable type")
+	}
+
+	current := l.head
+	for current != nil {
+		if l.comparator(current.value, item) == 0 {
+			l.MoveNodeToEnd(current)
+			return true
+		}
+		current = current.next
+	}
+	return false
+}
+
+// MoveNodeToEnd moves the specified node to the end of the list.
+func (l *LinkedList[T]) MoveNodeToEnd(node *Node[T]) {
+	if node == nil || node == l.tail {
+		return
+	}
+
+	// Remove the node from its current position
+	if node.prev != nil {
+		node.prev.next = node.next
+	}
+	if node.next != nil {
+		node.next.prev = node.prev
+	} else {
+		l.tail = node.prev
+	}
+
+	// Move the node to the end
+	node.next = nil
+	node.prev = l.tail
+	l.tail.next = node
+	l.tail = node
+}
+
 // RemoveNode removes a specific node from the list.
 func (l *LinkedList[T]) RemoveNode(n *Node[T]) {
 	if n.prev != nil {
