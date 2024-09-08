@@ -3,6 +3,7 @@ package collections
 import "golang.org/x/exp/constraints"
 
 // Comparator is a function type that compares two values
+// It returns a negative value if a < b, zero if a == b, and a positive value if a > b
 type Comparator[T any] func(a, b T) int
 
 // GenericComparator returns a Comparator for any ordered type
