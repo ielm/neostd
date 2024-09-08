@@ -1,4 +1,4 @@
-package vec
+package vector
 
 import (
 	"errors"
@@ -23,8 +23,8 @@ func New[T any](capacity int) *Vec[T] {
 	}
 }
 
-// WithCapacity creates a new Vec with the given capacity and comparator.
-func WithCapacity[T any](capacity int, comparator collections.Comparator[T]) *Vec[T] {
+// VecWithCapacity creates a new Vec with the given capacity and comparator.
+func VecWithCapacity[T any](capacity int, comparator collections.Comparator[T]) *Vec[T] {
 	return &Vec[T]{
 		data:       make([]T, 0, capacity),
 		len:        0,

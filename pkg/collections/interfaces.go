@@ -25,7 +25,7 @@ type Collection[T any] interface {
 	Size() int
 	Clear()
 	IsEmpty() bool
-	SetComparator(comp func(T, T) bool)
+	SetComparator(comp Comparator[T])
 }
 
 // List represents an ordered collection
@@ -34,6 +34,25 @@ type List[T any] interface {
 	Get(index int) (T, error)
 	Set(index int, item T) error
 	IndexOf(item T) int
+}
+
+// Vector represents a resizable array
+type Vector[T any] interface {
+	List[T]
+	Push(item T)
+	Pop() (T, bool)
+	Cap() int
+	Grow(newCap int)
+}
+
+type Deque[T any] interface {
+	List[T]
+	PushFront(item T)
+	PushBack(item T)
+	PopFront() (T, bool)
+	PopBack() (T, bool)
+	Front() (T, bool)
+	Back() (T, bool)
 }
 
 // Set represents a collection that contains no duplicate elements
