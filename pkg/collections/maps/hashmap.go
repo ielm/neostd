@@ -2,7 +2,6 @@ package maps
 
 import (
 	"math/bits"
-	"reflect"
 	"unsafe"
 
 	"github.com/ielm/neostd/pkg/collections"
@@ -35,10 +34,11 @@ type entry[K any, V any] struct {
 }
 
 // NewHashMap creates a new HashMap with default settings.
-func NewHashMap[K any, V any]() *HashMap[K, V] {
+func NewHashMap[K any, V any](comparator collections.Comparator[K]) *HashMap[K, V] {
 	h := &HashMap[K, V]{
 		capacity:   minCapacity,
 		loadFactor: defaultLoadFactor,
+		comparator: comparator,
 	}
 	hasher, err := hash.NewSipHasher[K]()
 	if err != nil {
@@ -216,13 +216,9 @@ func (h *HashMap[K, V]) hashToByte(hash uint64) byte {
 	return byte((hash >> 57) | 0x80)
 }
 
-// compareKeys compares two keys using the HashMap's comparator if available.
+// compareKeys compares two keys using the HashMap's comparator.
 func (h *HashMap[K, V]) compareKeys(a, b K) bool {
-	if h.comparator != nil {
-		return h.comparator(a, b) == 0
-	}
-	// If no comparator is set, use reflection to compare the keys
-	return reflect.DeepEqual(a, b)
+	return h.comparator(a, b) == 0
 }
 
 // Remove removes a key-value pair from the HashMap
@@ -321,33 +317,19 @@ func (h *HashMap[K, V]) SetComparator(comp collections.Comparator[K]) {
 
 // Ensure HashMap implements the Map interface for various types
 var (
-	_ collections.Map[any, any] = (*HashMap[any, any])(nil)
+	_ collections.Map[string, any] = (*HashMap[string, any])(nil)
+	_ collections.Map[int, any]    = (*HashMap[int, any])(nil)
+	_ collections.Map[bool, any]   = (*HashMap[bool, any])(nil)
 )
 
 // ContainsKey checks if the given key exists in the HashMap
 func (h *HashMap[K, V]) ContainsKey(key K) bool {
-	hash := h.hashKey(key)
-	index := hash & uint64(h.capacity-1)
-	hashByte := h.hashToByte(hash)
-
-	for i := uint64(0); i < maxProbeDistance; i++ {
-		group := index & ^uint64(groupSize-1)
-		match := h.matchGroup(group, hashByte)
-
-		for match != 0 {
-			matchIndex := group + uint64(bits.TrailingZeros64(uint64(match)))
-			if h.compareKeys(h.entries[matchIndex].key, key) {
-				return true
-			}
-			match &= match - 1
-		}
-
-		if h.ctrl[group] == emptyByte {
-			return false
-		}
-
-		index = h.nextProbe(index, i)
-	}
-
-	return false
+	_, found := h.Get(key)
+	return found
 }
+
+// T is an example of a type that's not inherently comparable
+type T interface{}
+
+// Ensure HashMap implements the Map interface for T
+var _ collections.Map[T, any] = (*HashMap[T, any])(nil)
