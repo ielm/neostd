@@ -13,6 +13,10 @@ type BinaryHeap[T any] struct {
 
 // NewBinaryHeap creates a new BinaryHeap with the given comparator.
 // This creates a max-heap by default.
+//
+// Example:
+//
+//	maxHeap := heap.NewBinaryHeap(collections.GenericComparator[int]())
 func NewBinaryHeap[T any](comparator collections.Comparator[T]) *BinaryHeap[T] {
 	return &BinaryHeap[T]{
 		data:       make([]T, 0),
@@ -22,6 +26,10 @@ func NewBinaryHeap[T any](comparator collections.Comparator[T]) *BinaryHeap[T] {
 
 // NewMinBinaryHeap creates a new BinaryHeap that functions as a min-heap.
 // It uses the provided comparator but reverses the comparison.
+//
+// Example:
+//
+//	minHeap := heap.NewMinBinaryHeap(collections.GenericComparator[int]())
 func NewMinBinaryHeap[T any](comparator collections.Comparator[T]) *BinaryHeap[T] {
 	return &BinaryHeap[T]{
 		data: make([]T, 0),
@@ -34,6 +42,10 @@ func NewMinBinaryHeap[T any](comparator collections.Comparator[T]) *BinaryHeap[T
 // Push adds an element to the heap.
 // For a max-heap, this maintains the property that parent >= children.
 // For a min-heap (created with NewMinBinaryHeap), this maintains the property that parent <= children.
+//
+// Example:
+//
+//	heap.Push(42)
 func (h *BinaryHeap[T]) Push(item T) {
 	h.data = append(h.data, item)
 	h.siftUp(len(h.data) - 1)
@@ -43,6 +55,13 @@ func (h *BinaryHeap[T]) Push(item T) {
 // For a max-heap, this is the maximum element.
 // For a min-heap (created with NewMinBinaryHeap), this is the minimum element.
 // If the heap is empty, it returns the zero value of T and false.
+//
+// Example:
+//
+//	topItem, exists := heap.Pop()
+//	if exists {
+//		fmt.Printf("Top item: %v\n", topItem)
+//	}
 func (h *BinaryHeap[T]) Pop() (T, bool) {
 	if h.IsEmpty() {
 		var zero T
@@ -63,6 +82,13 @@ func (h *BinaryHeap[T]) Pop() (T, bool) {
 // For a max-heap, this is the maximum element.
 // For a min-heap (created with NewMinBinaryHeap), this is the minimum element.
 // If the heap is empty, it returns the zero value of T and false.
+//
+// Example:
+//
+//	topItem, exists := heap.Peek()
+//	if exists {
+//		fmt.Printf("Top item without removing: %v\n", topItem)
+//	}
 func (h *BinaryHeap[T]) Peek() (T, bool) {
 	if h.IsEmpty() {
 		var zero T
@@ -72,16 +98,30 @@ func (h *BinaryHeap[T]) Peek() (T, bool) {
 }
 
 // IsEmpty returns true if the heap contains no elements.
+//
+// Example:
+//
+//	if heap.IsEmpty() {
+//		fmt.Println("The heap is empty")
+//	}
 func (h *BinaryHeap[T]) IsEmpty() bool {
 	return len(h.data) == 0
 }
 
 // Len returns the number of elements in the heap.
+//
+// Example:
+//
+//	fmt.Printf("Number of elements in the heap: %d\n", heap.Len())
 func (h *BinaryHeap[T]) Len() int {
 	return len(h.data)
 }
 
 // Clear removes all elements from the heap.
+//
+// Example:
+//
+//	heap.Clear()
 func (h *BinaryHeap[T]) Clear() {
 	h.data = h.data[:0]
 }
@@ -122,6 +162,13 @@ func (h *BinaryHeap[T]) siftDown(i int) {
 }
 
 // Iterator returns an iterator over the heap's elements in arbitrary order.
+//
+// Example:
+//
+//	it := heap.Iterator()
+//	for it.HasNext() {
+//		fmt.Printf("Element: %v\n", it.Next())
+//	}
 func (h *BinaryHeap[T]) Iterator() collections.Iterator[T] {
 	return &heapIterator[T]{heap: h, index: 0}
 }
@@ -147,6 +194,11 @@ func (it *heapIterator[T]) Next() T {
 // IntoSortedVec returns a sorted vector of the heap's elements.
 // For a max-heap, this returns the elements in descending order.
 // For a min-heap (created with NewMinBinaryHeap), this returns the elements in ascending order.
+//
+// Example:
+//
+//	sortedSlice := heap.IntoSortedVec()
+//	fmt.Printf("Sorted elements: %v\n", sortedSlice)
 func (h *BinaryHeap[T]) IntoSortedVec() []T {
 	result := make([]T, len(h.data))
 	for i := len(h.data) - 1; i >= 0; i-- {
@@ -157,6 +209,12 @@ func (h *BinaryHeap[T]) IntoSortedVec() []T {
 
 // SetComparator sets a new comparator for the heap.
 // This operation is O(n log n) as it requires rebuilding the heap.
+//
+// Example:
+//
+//	heap.SetComparator(func(a, b int) int {
+//		return b - a // Reverse order
+//	})
 func (h *BinaryHeap[T]) SetComparator(comparator collections.Comparator[T]) {
 	h.comparator = comparator
 	for i := len(h.data)/2 - 1; i >= 0; i-- {
