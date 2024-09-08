@@ -8,6 +8,7 @@ import (
 	"github.com/ielm/neostd/pkg/hash"
 )
 
+// Constants
 const (
 	defaultLoadFactor = 0.875
 	minCapacity       = 8
@@ -16,8 +17,7 @@ const (
 	emptyByte         = 0b11111111
 )
 
-// HashMap is a high-performance hash table implementation.
-// It uses open addressing with quadratic probing and SIMD-like optimizations.
+// HashMap struct definition
 type HashMap[K any, V any] struct {
 	ctrl       []byte
 	entries    []entry[K, V]
@@ -28,12 +28,21 @@ type HashMap[K any, V any] struct {
 	comparator collections.Comparator[K]
 }
 
+// entry struct definition
 type entry[K any, V any] struct {
 	key   K
 	value V
 }
 
 // NewHashMap creates a new HashMap with default settings.
+// It initializes the map with a minimum capacity and default load factor.
+//
+// The comparator parameter is used for key comparison. For built-in types,
+// you can use collections.GenericComparator[K]().
+//
+// Example:
+//
+//	hm := maps.NewHashMap[string, int](collections.GenericComparator[string]())
 func NewHashMap[K any, V any](comparator collections.Comparator[K]) *HashMap[K, V] {
 	h := &HashMap[K, V]{
 		capacity:   minCapacity,
@@ -49,17 +58,15 @@ func NewHashMap[K any, V any](comparator collections.Comparator[K]) *HashMap[K, 
 	return h
 }
 
-// initializeCtrl initializes the control bytes and entries.
-func (h *HashMap[K, V]) initializeCtrl() {
-	h.ctrl = make([]byte, h.capacity+groupSize)
-	for i := range h.ctrl {
-		h.ctrl[i] = emptyByte
-	}
-	h.entries = make([]entry[K, V], h.capacity)
-}
+// Core methods
 
 // Put inserts a key-value pair into the HashMap.
-// It returns the old value and a boolean indicating if the key existed.
+// If the key already exists, the old value is replaced and returned.
+// The boolean return value indicates whether an existing entry was updated.
+//
+// Example:
+//
+//	oldValue, existed := hm.Put("key", 42)
 func (h *HashMap[K, V]) Put(key K, value V) (V, bool) {
 	if h.shouldResize() {
 		h.resize(h.capacity * 2)
@@ -76,6 +83,87 @@ func (h *HashMap[K, V]) Put(key K, value V) (V, bool) {
 	}
 
 	return oldValue, existed
+}
+
+// Get retrieves a value from the HashMap by its key.
+// It returns the value and a boolean indicating whether the key was found.
+//
+// Example:
+//
+//	value, found := hm.Get("key")
+func (h *HashMap[K, V]) Get(key K) (V, bool) {
+	hash := h.hashKey(key)
+	index := hash & uint64(h.capacity-1)
+	hashByte := h.hashToByte(hash)
+
+	for i := uint64(0); i < maxProbeDistance; i++ {
+		group := index & ^uint64(groupSize-1)
+		match := h.matchGroup(group, hashByte)
+
+		for match != 0 {
+			matchIndex := group + uint64(bits.TrailingZeros64(uint64(match)))
+			if h.compareKeys(h.entries[matchIndex].key, key) {
+				return h.entries[matchIndex].value, true
+			}
+			match &= match - 1
+		}
+
+		if h.ctrl[group] == emptyByte {
+			var zero V
+			return zero, false
+		}
+
+		index = h.nextProbe(index, i)
+	}
+
+	var zero V
+	return zero, false
+}
+
+// Remove removes a key-value pair from the HashMap
+// Returns the removed value and a boolean indicating if the key existed.
+//
+// Example:
+//
+//	removedValue, existed := hm.Remove("key")
+func (h *HashMap[K, V]) Remove(key K) (V, bool) {
+	hash := h.hashKey(key)
+	index := hash & uint64(h.capacity-1)
+	hashByte := h.hashToByte(hash)
+
+	for i := uint64(0); i < maxProbeDistance; i++ {
+		group := index & ^uint64(groupSize-1)
+		match := h.matchGroup(group, hashByte)
+
+		for match != 0 {
+			matchIndex := group + uint64(bits.TrailingZeros64(uint64(match)))
+			if h.compareKeys(h.entries[matchIndex].key, key) {
+				return h.removeEntry(matchIndex)
+			}
+			match &= match - 1
+		}
+
+		if h.ctrl[group] == emptyByte {
+			var zero V
+			return zero, false
+		}
+
+		index = h.nextProbe(index, i)
+	}
+
+	var zero V
+	return zero, false
+}
+
+// Helper methods
+
+// initializeCtrl initializes the control bytes and entries.
+func (h *HashMap[K, V]) initializeCtrl() {
+	h.ctrl = make([]byte, h.capacity+groupSize)
+	for i := range h.ctrl {
+		h.ctrl[i] = emptyByte
+	}
+	h.entries = make([]entry[K, V], h.capacity)
 }
 
 // shouldResize checks if the HashMap needs to be resized
@@ -148,36 +236,6 @@ func (h *HashMap[K, V]) findEmptySlot(group uint64) int {
 	return -1
 }
 
-// Get retrieves a value from the HashMap by its key.
-func (h *HashMap[K, V]) Get(key K) (V, bool) {
-	hash := h.hashKey(key)
-	index := hash & uint64(h.capacity-1)
-	hashByte := h.hashToByte(hash)
-
-	for i := uint64(0); i < maxProbeDistance; i++ {
-		group := index & ^uint64(groupSize-1)
-		match := h.matchGroup(group, hashByte)
-
-		for match != 0 {
-			matchIndex := group + uint64(bits.TrailingZeros64(uint64(match)))
-			if h.compareKeys(h.entries[matchIndex].key, key) {
-				return h.entries[matchIndex].value, true
-			}
-			match &= match - 1
-		}
-
-		if h.ctrl[group] == emptyByte {
-			var zero V
-			return zero, false
-		}
-
-		index = h.nextProbe(index, i)
-	}
-
-	var zero V
-	return zero, false
-}
-
 // nextProbe calculates the next probe index using quadratic probing
 func (h *HashMap[K, V]) nextProbe(index, i uint64) uint64 {
 	return (index + i*i + i) & uint64(h.capacity-1)
@@ -221,37 +279,6 @@ func (h *HashMap[K, V]) compareKeys(a, b K) bool {
 	return h.comparator(a, b) == 0
 }
 
-// Remove removes a key-value pair from the HashMap
-// Returns the removed value and a boolean indicating if the key existed.
-func (h *HashMap[K, V]) Remove(key K) (V, bool) {
-	hash := h.hashKey(key)
-	index := hash & uint64(h.capacity-1)
-	hashByte := h.hashToByte(hash)
-
-	for i := uint64(0); i < maxProbeDistance; i++ {
-		group := index & ^uint64(groupSize-1)
-		match := h.matchGroup(group, hashByte)
-
-		for match != 0 {
-			matchIndex := group + uint64(bits.TrailingZeros64(uint64(match)))
-			if h.compareKeys(h.entries[matchIndex].key, key) {
-				return h.removeEntry(matchIndex)
-			}
-			match &= match - 1
-		}
-
-		if h.ctrl[group] == emptyByte {
-			var zero V
-			return zero, false
-		}
-
-		index = h.nextProbe(index, i)
-	}
-
-	var zero V
-	return zero, false
-}
-
 // removeEntry removes an entry at the given index
 func (h *HashMap[K, V]) removeEntry(index uint64) (V, bool) {
 	removedValue := h.entries[index].value
@@ -262,7 +289,13 @@ func (h *HashMap[K, V]) removeEntry(index uint64) (V, bool) {
 	return removedValue, true
 }
 
+// Additional methods
+
 // Clear removes all key-value pairs from the HashMap
+//
+// Example:
+//
+//	hm.Clear()
 func (h *HashMap[K, V]) Clear() {
 	h.size = 0
 	h.capacity = minCapacity
@@ -270,16 +303,30 @@ func (h *HashMap[K, V]) Clear() {
 }
 
 // Size returns the number of key-value pairs in the HashMap
+//
+// Example:
+//
+//	count := hm.Size()
 func (h *HashMap[K, V]) Size() int {
 	return h.size
 }
 
 // IsEmpty returns true if the HashMap contains no key-value pairs
+//
+// Example:
+//
+//	if hm.IsEmpty() {
+//		fmt.Println("HashMap is empty")
+//	}
 func (h *HashMap[K, V]) IsEmpty() bool {
 	return h.size == 0
 }
 
 // Keys returns a slice containing all the keys in the HashMap
+//
+// Example:
+//
+//	keys := hm.Keys()
 func (h *HashMap[K, V]) Keys() []K {
 	keys := make([]K, 0, h.size)
 	for i, ctrl := range h.ctrl {
@@ -291,6 +338,10 @@ func (h *HashMap[K, V]) Keys() []K {
 }
 
 // Values returns a slice containing all the values in the HashMap
+//
+// Example:
+//
+//	values := hm.Values()
 func (h *HashMap[K, V]) Values() []V {
 	values := make([]V, 0, h.size)
 	for i, ctrl := range h.ctrl {
@@ -302,6 +353,12 @@ func (h *HashMap[K, V]) Values() []V {
 }
 
 // ForEach applies the given function to each key-value pair in the HashMap
+//
+// Example:
+//
+//	hm.ForEach(func(key string, value int) {
+//		fmt.Printf("Key: %s, Value: %d\n", key, value)
+//	})
 func (h *HashMap[K, V]) ForEach(f func(K, V)) {
 	for i, ctrl := range h.ctrl {
 		if ctrl&0x80 != 0 {
@@ -310,23 +367,31 @@ func (h *HashMap[K, V]) ForEach(f func(K, V)) {
 	}
 }
 
-// SetComparator sets a custom comparator for keys
-func (h *HashMap[K, V]) SetComparator(comp collections.Comparator[K]) {
-	h.comparator = comp
-}
-
-// Ensure HashMap implements the Map interface for various types
-var (
-	_ collections.Map[string, any] = (*HashMap[string, any])(nil)
-	_ collections.Map[int, any]    = (*HashMap[int, any])(nil)
-	_ collections.Map[bool, any]   = (*HashMap[bool, any])(nil)
-)
-
 // ContainsKey checks if the given key exists in the HashMap
 func (h *HashMap[K, V]) ContainsKey(key K) bool {
 	_, found := h.Get(key)
 	return found
 }
+
+// SetComparator sets a custom comparator for keys
+// This is particularly useful for complex key types or when you need specific comparison logic.
+//
+// Example:
+//
+//	hm.SetComparator(func(a, b MyKeyType) int {
+//		// Custom comparison logic
+//		return a.CompareTo(b)
+//	})
+func (h *HashMap[K, V]) SetComparator(comp collections.Comparator[K]) {
+	h.comparator = comp
+}
+
+// Type assertions
+var (
+	_ collections.Map[string, any] = (*HashMap[string, any])(nil)
+	_ collections.Map[int, any]    = (*HashMap[int, any])(nil)
+	_ collections.Map[bool, any]   = (*HashMap[bool, any])(nil)
+)
 
 // T is an example of a type that's not inherently comparable
 type T interface{}
