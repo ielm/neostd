@@ -70,3 +70,12 @@ type Map[K comparable, V any] interface {
 	Values() []V
 	SetComparator(comp Comparator[K])
 }
+
+// ProbabilisticSet represents a probabilistic set data structure
+type ProbabilisticSet[T any] interface {
+	Add(item T) bool
+	Contains(item T) bool
+	Clear()
+	Size() int
+	IsEmpty() bool
+}
