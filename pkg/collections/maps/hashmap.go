@@ -2,6 +2,7 @@ package maps
 
 import (
 	"math/bits"
+	"reflect"
 	"unsafe"
 
 	"github.com/ielm/neostd/pkg/collections"
@@ -18,7 +19,7 @@ const (
 
 // HashMap is a high-performance hash table implementation.
 // It uses open addressing with quadratic probing and SIMD-like optimizations.
-type HashMap[K comparable, V any] struct {
+type HashMap[K any, V any] struct {
 	ctrl       []byte
 	entries    []entry[K, V]
 	size       int
@@ -28,20 +29,20 @@ type HashMap[K comparable, V any] struct {
 	comparator collections.Comparator[K]
 }
 
-type entry[K comparable, V any] struct {
+type entry[K any, V any] struct {
 	key   K
 	value V
 }
 
 // NewHashMap creates a new HashMap with default settings.
-func NewHashMap[K comparable, V any]() *HashMap[K, V] {
+func NewHashMap[K any, V any]() *HashMap[K, V] {
 	h := &HashMap[K, V]{
 		capacity:   minCapacity,
 		loadFactor: defaultLoadFactor,
 	}
 	hasher, err := hash.NewSipHasher[K]()
 	if err != nil {
-		panic(err)
+		panic(err) // In production, consider handling this error more gracefully
 	}
 	h.hasher = hasher
 	h.initializeCtrl()
@@ -60,7 +61,7 @@ func (h *HashMap[K, V]) initializeCtrl() {
 // Put inserts a key-value pair into the HashMap.
 // It returns the old value and a boolean indicating if the key existed.
 func (h *HashMap[K, V]) Put(key K, value V) (V, bool) {
-	if h.size >= int(float64(h.capacity)*h.loadFactor) {
+	if h.shouldResize() {
 		h.resize(h.capacity * 2)
 	}
 
@@ -75,6 +76,11 @@ func (h *HashMap[K, V]) Put(key K, value V) (V, bool) {
 	}
 
 	return oldValue, existed
+}
+
+// shouldResize checks if the HashMap needs to be resized
+func (h *HashMap[K, V]) shouldResize() bool {
+	return h.size >= int(float64(h.capacity)*h.loadFactor)
 }
 
 // findOrInsert finds an existing entry or inserts a new one using quadratic probing.
@@ -100,7 +106,7 @@ func (h *HashMap[K, V]) findOrInsert(hash uint64, key K) (int, bool) {
 			return slotIndex, false
 		}
 
-		index = (index + i*i + i) & uint64(h.capacity-1) // Quadratic probing
+		index = h.nextProbe(index, i)
 	}
 
 	// If we reach here, we need to resize and try again
@@ -165,11 +171,16 @@ func (h *HashMap[K, V]) Get(key K) (V, bool) {
 			return zero, false
 		}
 
-		index = (index + i*i + i) & uint64(h.capacity-1) // Quadratic probing
+		index = h.nextProbe(index, i)
 	}
 
 	var zero V
 	return zero, false
+}
+
+// nextProbe calculates the next probe index using quadratic probing
+func (h *HashMap[K, V]) nextProbe(index, i uint64) uint64 {
+	return (index + i*i + i) & uint64(h.capacity-1)
 }
 
 // resize increases the capacity of the HashMap and rehashes all elements.
@@ -210,16 +221,14 @@ func (h *HashMap[K, V]) compareKeys(a, b K) bool {
 	if h.comparator != nil {
 		return h.comparator(a, b) == 0
 	}
-	return a == b
+	// If no comparator is set, use reflection to compare the keys
+	return reflect.DeepEqual(a, b)
 }
 
 // Remove removes a key-value pair from the HashMap
 // Returns the removed value and a boolean indicating if the key existed.
 func (h *HashMap[K, V]) Remove(key K) (V, bool) {
-	hash, err := h.hasher.Hash(key)
-	if err != nil {
-		panic(err)
-	}
+	hash := h.hashKey(key)
 	index := hash & uint64(h.capacity-1)
 	hashByte := h.hashToByte(hash)
 
@@ -230,12 +239,7 @@ func (h *HashMap[K, V]) Remove(key K) (V, bool) {
 		for match != 0 {
 			matchIndex := group + uint64(bits.TrailingZeros64(uint64(match)))
 			if h.compareKeys(h.entries[matchIndex].key, key) {
-				removedValue := h.entries[matchIndex].value
-				h.ctrl[matchIndex] = emptyByte
-				var zero V
-				h.entries[matchIndex] = entry[K, V]{key: *new(K), value: zero}
-				h.size--
-				return removedValue, true
+				return h.removeEntry(matchIndex)
 			}
 			match &= match - 1
 		}
@@ -245,11 +249,21 @@ func (h *HashMap[K, V]) Remove(key K) (V, bool) {
 			return zero, false
 		}
 
-		index = (index + i*i + i) & uint64(h.capacity-1) // Quadratic probing
+		index = h.nextProbe(index, i)
 	}
 
 	var zero V
 	return zero, false
+}
+
+// removeEntry removes an entry at the given index
+func (h *HashMap[K, V]) removeEntry(index uint64) (V, bool) {
+	removedValue := h.entries[index].value
+	h.ctrl[index] = emptyByte
+	var zero V
+	h.entries[index] = entry[K, V]{key: *new(K), value: zero}
+	h.size--
+	return removedValue, true
 }
 
 // Clear removes all key-value pairs from the HashMap
@@ -298,4 +312,42 @@ func (h *HashMap[K, V]) ForEach(f func(K, V)) {
 			f(h.entries[i].key, h.entries[i].value)
 		}
 	}
+}
+
+// SetComparator sets a custom comparator for keys
+func (h *HashMap[K, V]) SetComparator(comp collections.Comparator[K]) {
+	h.comparator = comp
+}
+
+// Ensure HashMap implements the Map interface for various types
+var (
+	_ collections.Map[any, any] = (*HashMap[any, any])(nil)
+)
+
+// ContainsKey checks if the given key exists in the HashMap
+func (h *HashMap[K, V]) ContainsKey(key K) bool {
+	hash := h.hashKey(key)
+	index := hash & uint64(h.capacity-1)
+	hashByte := h.hashToByte(hash)
+
+	for i := uint64(0); i < maxProbeDistance; i++ {
+		group := index & ^uint64(groupSize-1)
+		match := h.matchGroup(group, hashByte)
+
+		for match != 0 {
+			matchIndex := group + uint64(bits.TrailingZeros64(uint64(match)))
+			if h.compareKeys(h.entries[matchIndex].key, key) {
+				return true
+			}
+			match &= match - 1
+		}
+
+		if h.ctrl[group] == emptyByte {
+			return false
+		}
+
+		index = h.nextProbe(index, i)
+	}
+
+	return false
 }
