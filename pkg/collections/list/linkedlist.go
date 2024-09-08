@@ -1,5 +1,4 @@
-// Implementation of a doubly linked list with a custom comparator
-
+// Package list provides a generic implementation of a doubly linked list.
 package list
 
 import (
@@ -8,12 +7,14 @@ import (
 	"github.com/ielm/neostd/pkg/collections"
 )
 
+// node represents a single element in the linked list.
 type node[T any] struct {
 	value T
 	next  *node[T]
 	prev  *node[T]
 }
 
+// LinkedList is a generic doubly linked list implementation.
 type LinkedList[T any] struct {
 	head       *node[T]
 	tail       *node[T]
@@ -21,240 +22,179 @@ type LinkedList[T any] struct {
 	comparator collections.Comparator[T]
 }
 
+// NewLinkedList creates and returns a new empty LinkedList.
 func NewLinkedList[T any]() *LinkedList[T] {
 	return &LinkedList[T]{}
 }
 
+// SetComparator sets the comparator function for the list.
 func (l *LinkedList[T]) SetComparator(comp collections.Comparator[T]) {
 	l.comparator = comp
 }
 
+// Add appends an item to the end of the list.
 func (l *LinkedList[T]) Add(item T) bool {
-	newNode := &node[T]{value: item}
-	if l.head == nil {
-		l.head = newNode
-		l.tail = newNode
-	} else {
-		l.tail.next = newNode
-		newNode.prev = l.tail
-		l.tail = newNode
-	}
-	l.size++
-
+	l.addLast(item)
 	return true
 }
 
-// AddFirst adds an item to the beginning of the list
+// AddFirst adds an item to the beginning of the list.
 func (l *LinkedList[T]) AddFirst(item T) {
-	newNode := &node[T]{value: item}
-	if l.head == nil {
-		l.head = newNode
-		l.tail = newNode
-	} else {
-		newNode.next = l.head
+	newNode := &node[T]{value: item, next: l.head}
+	if l.head != nil {
 		l.head.prev = newNode
-		l.head = newNode
+	} else {
+		l.tail = newNode
 	}
+	l.head = newNode
 	l.size++
 }
 
-// AddLast adds an item to the end of the list
+// AddLast adds an item to the end of the list.
 func (l *LinkedList[T]) AddLast(item T) {
-	l.Add(item) // This is the same as Add
+	l.addLast(item)
 }
 
+// addLast is a helper method to add an item to the end of the list.
+func (l *LinkedList[T]) addLast(item T) {
+	newNode := &node[T]{value: item, prev: l.tail}
+	if l.tail != nil {
+		l.tail.next = newNode
+	} else {
+		l.head = newNode
+	}
+	l.tail = newNode
+	l.size++
+}
+
+// Set updates the item at the specified index.
 func (l *LinkedList[T]) Set(index int, item T) error {
 	if index < 0 || index >= l.size {
 		return errors.New("index out of bounds")
 	}
 
-	if index < l.size/2 {
-		return l.setForward(index, item)
-	} else {
-		return l.setBackward(index, item)
-	}
-}
-
-func (l *LinkedList[T]) setForward(index int, item T) error {
-	current := l.head
-	for i := 0; i < index; i++ {
-		current = current.next
-	}
-	current.value = item
+	node := l.getNode(index)
+	node.value = item
 	return nil
 }
 
-func (l *LinkedList[T]) setBackward(index int, item T) error {
-	current := l.tail
-	for i := l.size - 1; i > index; i-- {
-		current = current.prev
-	}
-	current.value = item
-	return nil
-}
-
+// InsertSorted inserts an item into the list maintaining sorted order.
 func (l *LinkedList[T]) InsertSorted(item T) {
 	if l.comparator == nil {
-		panic("Comparator not set for non-comparable type")
+		panic("comparator not set for non-comparable type")
 	}
 
 	newNode := &node[T]{value: item}
 
 	if l.head == nil || l.comparator(item, l.head.value) <= 0 {
-		newNode.next = l.head
-		if l.head != nil {
-			l.head.prev = newNode
-		}
-		l.head = newNode
-		if l.tail == nil {
-			l.tail = newNode
-		}
-	} else {
-		current := l.head
-		for current.next != nil && l.comparator(item, current.next.value) > 0 {
-			current = current.next
-		}
-		newNode.next = current.next
-		newNode.prev = current
-		if current.next != nil {
-			current.next.prev = newNode
-		} else {
-			l.tail = newNode
-		}
-		current.next = newNode
-	}
-
-	l.size++
-}
-
-func (l *LinkedList[T]) Remove(item T) bool {
-	if l.head == nil {
-		return false
-	}
-
-	if l.comparator == nil {
-		panic("Comparator not set for non-comparable type")
-	}
-
-	if l.comparator(l.head.value, item) == 0 {
-		l.head = l.head.next
-		if l.head == nil {
-			l.tail = nil
-		} else {
-			l.head.prev = nil
-		}
-		l.size--
-		return true
+		l.AddFirst(item)
+		return
 	}
 
 	current := l.head
-	for current.next != nil {
-		if l.comparator(current.next.value, item) == 0 {
-			current.next = current.next.next
-			if current.next == nil {
-				l.tail = current
-			} else {
-				current.next.prev = current
-			}
-			l.size--
+	for current.next != nil && l.comparator(item, current.next.value) > 0 {
+		current = current.next
+	}
+
+	newNode.next = current.next
+	newNode.prev = current
+	if current.next != nil {
+		current.next.prev = newNode
+	} else {
+		l.tail = newNode
+	}
+	current.next = newNode
+	l.size++
+}
+
+// Get returns the item at the specified index.
+func (l *LinkedList[T]) Get(index int) (T, error) {
+	if index < 0 || index >= l.size {
+		var zero T
+		return zero, errors.New("index out of bounds")
+	}
+	return l.getNode(index).value, nil
+}
+
+// getNode returns the node at the specified index.
+func (l *LinkedList[T]) getNode(index int) *node[T] {
+	if index < l.size/2 {
+		return l.traverseForward(index)
+	}
+	return l.traverseBackward(index)
+}
+
+// Remove removes the first occurrence of the specified item from the list.
+func (l *LinkedList[T]) Remove(item T) bool {
+	if l.comparator == nil {
+		panic("comparator not set for non-comparable type")
+	}
+
+	current := l.head
+	for current != nil {
+		if l.comparator(current.value, item) == 0 {
+			l.removeNode(current)
 			return true
 		}
 		current = current.next
 	}
-
 	return false
 }
 
-// RemoveFirst removes and returns the first item in the list
+// RemoveFirst removes and returns the first item in the list.
 func (l *LinkedList[T]) RemoveFirst() (T, error) {
-	if l.head == nil {
+	if l.IsEmpty() {
 		var zero T
 		return zero, errors.New("list is empty")
 	}
 	value := l.head.value
-	l.head = l.head.next
-	if l.head == nil {
-		l.tail = nil
-	} else {
-		l.head.prev = nil
-	}
-	l.size--
+	l.removeNode(l.head)
 	return value, nil
 }
 
-// RemoveLast removes and returns the last item in the list
+// RemoveLast removes and returns the last item in the list.
 func (l *LinkedList[T]) RemoveLast() (T, error) {
-	if l.tail == nil {
+	if l.IsEmpty() {
 		var zero T
 		return zero, errors.New("list is empty")
 	}
 	value := l.tail.value
-	l.tail = l.tail.prev
-	if l.tail == nil {
-		l.head = nil
-	} else {
-		l.tail.next = nil
-	}
-	l.size--
+	l.removeNode(l.tail)
 	return value, nil
 }
 
+// RemoveAt removes and returns the item at the specified index.
 func (l *LinkedList[T]) RemoveAt(index int) (T, error) {
 	if index < 0 || index >= l.size {
 		var zero T
 		return zero, errors.New("index out of bounds")
 	}
 
-	if index < l.size/2 {
-		return l.removeAtForward(index)
-	} else {
-		return l.removeAtBackward(index)
-	}
-}
-
-func (l *LinkedList[T]) removeAtForward(index int) (T, error) {
-	current := l.head
-	for i := 0; i < index; i++ {
-		current = current.next
-	}
-	value := current.value
-	current.next.prev = current.prev
-
-	if current.prev != nil {
-		current.prev.next = current.next
-	} else {
-		l.head = current.next
-	}
-
-	l.size--
+	node := l.getNode(index)
+	value := node.value
+	l.removeNode(node)
 	return value, nil
 }
 
-func (l *LinkedList[T]) removeAtBackward(index int) (T, error) {
-	current := l.tail
-	for i := l.size - 1; i > index; i-- {
-		current = current.prev
-	}
-	value := current.value
-	current.prev.next = current.next
-
-	if current.next != nil {
-		current.next.prev = current.prev
+// removeNode is a helper method to remove a node from the list.
+func (l *LinkedList[T]) removeNode(n *node[T]) {
+	if n.prev != nil {
+		n.prev.next = n.next
 	} else {
-		l.tail = current.prev
+		l.head = n.next
 	}
-
+	if n.next != nil {
+		n.next.prev = n.prev
+	} else {
+		l.tail = n.prev
+	}
 	l.size--
-	return value, nil
 }
 
+// Contains checks if the list contains the specified item.
 func (l *LinkedList[T]) Contains(item T) bool {
-	if l.head == nil {
-		return false
-	}
-
 	if l.comparator == nil {
-		panic("Comparator not set for non-comparable type")
+		panic("comparator not set for non-comparable type")
 	}
 
 	current := l.head
@@ -264,38 +204,27 @@ func (l *LinkedList[T]) Contains(item T) bool {
 		}
 		current = current.next
 	}
-
 	return false
 }
 
+// Size returns the number of elements in the list.
 func (l *LinkedList[T]) Size() int {
 	return l.size
 }
 
+// IsEmpty returns true if the list is empty.
 func (l *LinkedList[T]) IsEmpty() bool {
 	return l.size == 0
 }
 
+// Clear removes all elements from the list.
 func (l *LinkedList[T]) Clear() {
 	l.head = nil
 	l.tail = nil
 	l.size = 0
 }
 
-func (l *LinkedList[T]) Get(index int) (T, error) {
-	if index < 0 || index >= l.size {
-		var zero T
-		return zero, errors.New("index out of bounds")
-	}
-
-	if index < l.size/2 {
-		return l.traverseForward(index).value, nil
-
-	} else {
-		return l.traverseBackward(index).value, nil
-	}
-}
-
+// traverseForward traverses the list from the head to the specified index.
 func (l *LinkedList[T]) traverseForward(index int) *node[T] {
 	current := l.head
 	for i := 0; i < index; i++ {
@@ -304,6 +233,7 @@ func (l *LinkedList[T]) traverseForward(index int) *node[T] {
 	return current
 }
 
+// traverseBackward traverses the list from the tail to the specified index.
 func (l *LinkedList[T]) traverseBackward(index int) *node[T] {
 	current := l.tail
 	for i := l.size - 1; i > index; i-- {
@@ -312,9 +242,10 @@ func (l *LinkedList[T]) traverseBackward(index int) *node[T] {
 	return current
 }
 
+// IndexOf returns the index of the first occurrence of the specified item.
 func (l *LinkedList[T]) IndexOf(item T) int {
 	if l.comparator == nil {
-		panic("Comparator not set for non-comparable type")
+		panic("comparator not set for non-comparable type")
 	}
 
 	current := l.head
@@ -325,4 +256,50 @@ func (l *LinkedList[T]) IndexOf(item T) int {
 		current = current.next
 	}
 	return -1
+}
+
+// Iterator returns an iterator for the list.
+func (l *LinkedList[T]) Iterator() collections.Iterator[T] {
+	return &linkedListIterator[T]{current: l.head}
+}
+
+// ReverseIterator returns a reverse iterator for the list.
+func (l *LinkedList[T]) ReverseIterator() collections.Iterator[T] {
+	return &linkedListReverseIterator[T]{current: l.tail}
+}
+
+// linkedListIterator implements the Iterator interface for LinkedList.
+type linkedListIterator[T any] struct {
+	current *node[T]
+}
+
+func (it *linkedListIterator[T]) HasNext() bool {
+	return it.current != nil
+}
+
+func (it *linkedListIterator[T]) Next() T {
+	if !it.HasNext() {
+		panic("no more elements")
+	}
+	value := it.current.value
+	it.current = it.current.next
+	return value
+}
+
+// linkedListReverseIterator implements the Iterator interface for reverse iteration.
+type linkedListReverseIterator[T any] struct {
+	current *node[T]
+}
+
+func (it *linkedListReverseIterator[T]) HasNext() bool {
+	return it.current != nil
+}
+
+func (it *linkedListReverseIterator[T]) Next() T {
+	if !it.HasNext() {
+		panic("no more elements")
+	}
+	value := it.current.value
+	it.current = it.current.prev
+	return value
 }
