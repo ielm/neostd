@@ -49,4 +49,5 @@ type Map[K comparable, V any] interface {
 	ContainsKey(key K) bool
 	Keys() []K
 	Values() []V
+	SetComparator(comp Comparator[K])
 }
