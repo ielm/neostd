@@ -38,17 +38,30 @@ type XorFilter struct {
 //		log.Fatal(err)
 //	}
 func NewXorFilter(expectedElements int) (*XorFilter, error) {
+	hasher, err := hash.NewSipHasher[[]byte]()
+	if err != nil {
+		return nil, err
+	}
+	return NewXorFilterWithHasher(expectedElements, hasher)
+}
+
+// NewXorFilterWithHasher creates a new Xor filter with the given expected number of elements
+// and a custom hasher.
+//
+// Example:
+//
+//	customHasher := &MyCustomHasher{}
+//	xf, err := NewXorFilterWithHasher(1000000, customHasher)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+func NewXorFilterWithHasher(expectedElements int, hasher hash.Hasher[[]byte]) (*XorFilter, error) {
 	if expectedElements <= 0 {
 		return nil, errors.New("expected elements must be positive")
 	}
 
 	capacity := nextPowerOfTwo(uint64(math.Ceil(float64(expectedElements) * 1.23)))
 	segmentCount := capacity / segmentLength
-
-	hasher, err := hash.NewSipHasher[[]byte]()
-	if err != nil {
-		return nil, err
-	}
 
 	return &XorFilter{
 		fingerprints:       make([]uint8, capacity),
@@ -180,6 +193,8 @@ func (xf *XorFilter) UnmarshalBinary(data []byte) error {
 	xf.seed = binary.LittleEndian.Uint64(data[20:28])
 	xf.fingerprints = make([]uint8, len(data)-28)
 	copy(xf.fingerprints, data[28:])
+
+	// Use the default SipHasher for deserialized XorFilters
 	var err error
 	xf.hasher, err = hash.NewSipHasher[[]byte]()
 	return err

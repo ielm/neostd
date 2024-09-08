@@ -3,6 +3,7 @@ package filter
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"math/bits"
 
@@ -29,6 +30,24 @@ type BloomFilter struct {
 //		log.Fatal(err)
 //	}
 func NewBloomFilter(expectedElements int, falsePositiveRate float64) (*BloomFilter, error) {
+	hasher, err := hash.NewSipHasher[[]byte]()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create default hasher: %w", err)
+	}
+	return NewBloomFilterWithHasher(expectedElements, falsePositiveRate, hasher)
+}
+
+// NewBloomFilterWithHasher creates a new Bloom filter with the given expected number of elements,
+// desired false positive rate, and a custom hasher.
+//
+// Example:
+//
+//	customHasher := &MyCustomHasher{}
+//	bf, err := NewBloomFilterWithHasher(1000, 0.01, customHasher)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+func NewBloomFilterWithHasher(expectedElements int, falsePositiveRate float64, hasher hash.Hasher[[]byte]) (*BloomFilter, error) {
 	if expectedElements <= 0 {
 		return nil, errors.New("expected elements must be positive")
 	}
@@ -38,11 +57,6 @@ func NewBloomFilter(expectedElements int, falsePositiveRate float64) (*BloomFilt
 
 	size := optimalSize(expectedElements, falsePositiveRate)
 	hashCount := optimalHashCount(size, expectedElements)
-
-	hasher, err := hash.NewSipHasher[[]byte]()
-	if err != nil {
-		return nil, err
-	}
 
 	return &BloomFilter{
 		bitset:    make([]uint64, (size+63)/64),

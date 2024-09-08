@@ -3,6 +3,7 @@ package filter
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"math/bits"
 
@@ -42,6 +43,24 @@ type CuckooFilter struct {
 //	    log.Fatal(err)
 //	}
 func NewCuckooFilter(expectedElements int, falsePositiveRate float64) (*CuckooFilter, error) {
+	hasher, err := hash.NewSipHasher[[]byte]()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create default hasher: %w", err)
+	}
+	return NewCuckooFilterWithHasher(expectedElements, falsePositiveRate, hasher)
+}
+
+// NewCuckooFilterWithHasher creates a new Cuckoo filter with the given expected number of elements,
+// desired false positive rate, and a custom hasher.
+//
+// Example:
+//
+//	customHasher := &MyCustomHasher{}
+//	cf, err := NewCuckooFilterWithHasher(1000, 0.01, customHasher)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+func NewCuckooFilterWithHasher(expectedElements int, falsePositiveRate float64, hasher hash.Hasher[[]byte]) (*CuckooFilter, error) {
 	if expectedElements <= 0 {
 		return nil, errors.New("expected elements must be positive")
 	}
@@ -51,11 +70,6 @@ func NewCuckooFilter(expectedElements int, falsePositiveRate float64) (*CuckooFi
 
 	size := nextPowerOfTwo(uint64(float64(expectedElements) / falsePositiveRate))
 	buckets := make([]uint32, size)
-
-	hasher, err := hash.NewSipHasher[[]byte]()
-	if err != nil {
-		return nil, err
-	}
 
 	return &CuckooFilter{
 		buckets:    buckets,

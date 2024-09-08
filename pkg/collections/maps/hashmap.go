@@ -44,16 +44,27 @@ type entry[K any, V any] struct {
 //
 //	hm := maps.NewHashMap[string, int](collections.GenericComparator[string]())
 func NewHashMap[K any, V any](comparator collections.Comparator[K]) *HashMap[K, V] {
-	h := &HashMap[K, V]{
-		capacity:   minCapacity,
-		loadFactor: defaultLoadFactor,
-		comparator: comparator,
-	}
 	hasher, err := hash.NewSipHasher[K]()
 	if err != nil {
 		panic(err) // In production, consider handling this error more gracefully
 	}
-	h.hasher = hasher
+	return NewHashMapWithHasher[K, V](comparator, hasher)
+}
+
+// NewHashMapWithHasher creates a new HashMap with a custom hasher.
+// This allows for more flexibility in how keys are hashed.
+//
+// Example:
+//
+//	customHasher := &MyCustomHasher{}
+//	hm := maps.NewHashMapWithHasher[string, int](collections.GenericComparator[string](), customHasher)
+func NewHashMapWithHasher[K any, V any](comparator collections.Comparator[K], hasher hash.Hasher[K]) *HashMap[K, V] {
+	h := &HashMap[K, V]{
+		capacity:   minCapacity,
+		loadFactor: defaultLoadFactor,
+		comparator: comparator,
+		hasher:     hasher,
+	}
 	h.initializeCtrl()
 	return h
 }
