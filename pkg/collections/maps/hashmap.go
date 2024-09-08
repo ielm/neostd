@@ -388,9 +388,10 @@ func (h *HashMap[K, V]) SetComparator(comp collections.Comparator[K]) {
 
 // Type assertions
 var (
-	_ collections.Map[string, any] = (*HashMap[string, any])(nil)
-	_ collections.Map[int, any]    = (*HashMap[int, any])(nil)
-	_ collections.Map[bool, any]   = (*HashMap[bool, any])(nil)
+	_ collections.Map[string, any]      = (*HashMap[string, any])(nil)
+	_ collections.Map[int, any]         = (*HashMap[int, any])(nil)
+	_ collections.Map[bool, any]        = (*HashMap[bool, any])(nil)
+	_ collections.Map[interface{}, any] = (*HashMap[interface{}, any])(nil)
 )
 
 // T is an example of a type that's not inherently comparable
