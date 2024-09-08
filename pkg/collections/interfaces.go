@@ -12,6 +12,11 @@ type Iterator[T any] interface {
 	Next() T
 }
 
+type Pair[K any, V any] struct {
+	Key   K
+	Value V
+}
+
 type Collection[T any] interface {
 	Iterable[T]
 	Add(item T) bool
