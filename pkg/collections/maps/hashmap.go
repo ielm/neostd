@@ -273,7 +273,8 @@ func (h *HashMap[K, V]) resize(newCapacity int) {
 
 // hashKey hashes the key using the HashMap's hasher.
 func (h *HashMap[K, V]) hashKey(key K) uint64 {
-	hash, err := h.hasher.Hash(key)
+	_hash, err := h.hasher.Hash(key)
+	hash := hash.HashBytesToUint64(_hash)
 	if err != nil {
 		panic(err)
 	}

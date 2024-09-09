@@ -135,12 +135,12 @@ func (bf *BloomFilter) FalsePositiveRate() float64 {
 	return math.Pow(setBits/float64(bf.size), float64(bf.hashCount))
 }
 
-// hashValues generates two hash values for the given data.
 func (bf *BloomFilter) hashValues(data []byte) (uint64, uint64) {
-	h1, err := bf.hasher.Hash(data)
+	hashBytes, err := bf.hasher.Hash(data)
 	if err != nil {
 		panic(err) // In production, consider a more graceful error handling
 	}
+	h1 := binary.LittleEndian.Uint64(hashBytes)
 	h2 := h1 >> 32
 	return h1, h2
 }

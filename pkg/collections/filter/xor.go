@@ -203,7 +203,8 @@ func (xf *XorFilter) UnmarshalBinary(data []byte) error {
 // Helper functions
 
 func (xf *XorFilter) hashValues(data []byte) (uint32, uint32, uint32) {
-	h, _ := xf.hasher.Hash(data)
+	_h, _ := xf.hasher.Hash(data)
+	h := hash.HashBytesToUint64(_h)
 	h1 := uint32(h) & (xf.segmentCountLength - 1)
 	h2 := uint32(h>>32) & (xf.segmentCountLength - 1)
 	h3 := xf.hash(uint64(h1) ^ uint64(h2))

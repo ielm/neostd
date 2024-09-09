@@ -255,12 +255,14 @@ func (cf *CuckooFilter) UnmarshalBinary(data []byte) error {
 // Helper functions
 
 func (cf *CuckooFilter) fingerprint(data []byte) uint8 {
-	h, _ := cf.hasher.Hash(data)
+	_h, _ := cf.hasher.Hash(data)
+	h := hash.HashBytesToUint64(_h)
 	return uint8(h&0xFF) | 1 // Ensure fingerprint is non-zero
 }
 
 func (cf *CuckooFilter) index(data []byte) uint64 {
-	h, _ := cf.hasher.Hash(data)
+	_h, _ := cf.hasher.Hash(data)
+	h := hash.HashBytesToUint64(_h)
 	return h % cf.size
 }
 
