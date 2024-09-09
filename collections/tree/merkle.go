@@ -1,30 +1,20 @@
 package tree
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"math/bits"
-	"sync"
 
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/hash"
 )
 
-// MerkleTree represents a Merkle Tree data structure.
+// MerkleTree represents a Merkle Tree data structure implementing the Set interface.
 type MerkleTree struct {
-	root     *MerkleNode
-	leaves   []*MerkleNode
-	hasher   hash.Hasher[[]byte]
-	nodePool *sync.Pool
-}
-
-// MerkleNode represents a node in the Merkle Tree.
-type MerkleNode struct {
-	hash  []byte
-	left  *MerkleNode
-	right *MerkleNode
+	*baseTree[[]byte]
+	leaves []*Node[[]byte]
 }
 
 // NewMerkleTree creates a new Merkle Tree from the given data.
@@ -35,23 +25,18 @@ func NewMerkleTree(data [][]byte) (*MerkleTree, error) {
 
 	hasher, err := hash.NewSipHasher[[]byte]()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create hasher: %w", err)
 	}
 
-	tree := &MerkleTree{
-		hasher: hasher,
-		nodePool: &sync.Pool{
-			New: func() interface{} {
-				return &MerkleNode{}
-			},
-		},
+	mt := &MerkleTree{
+		baseTree: newBaseTree(comp.ByteSliceComparator, hasher),
 	}
 
-	if err := tree.Build(data); err != nil {
-		return nil, err
+	if err := mt.Build(data); err != nil {
+		return nil, fmt.Errorf("failed to build tree: %w", err)
 	}
 
-	return tree, nil
+	return mt, nil
 }
 
 // Build constructs the Merkle Tree from the given data.
@@ -60,37 +45,38 @@ func (mt *MerkleTree) Build(data [][]byte) error {
 		return errors.New("cannot build tree with no data")
 	}
 
-	mt.leaves = make([]*MerkleNode, len(data))
+	mt.leaves = make([]*Node[[]byte], len(data))
 
 	// Create leaf nodes
 	for i, item := range data {
 		hash := mt.hashData(item)
-		mt.leaves[i] = mt.newNode(hash, nil, nil)
+		mt.leaves[i] = &Node[[]byte]{Value: hash}
 	}
 
 	mt.root = mt.buildTree(mt.leaves)
+	mt.size = len(mt.leaves)
 	return nil
 }
 
 // buildTree recursively builds the Merkle Tree from the given nodes.
-func (mt *MerkleTree) buildTree(nodes []*MerkleNode) *MerkleNode {
+func (mt *MerkleTree) buildTree(nodes []*Node[[]byte]) *Node[[]byte] {
 	if len(nodes) == 1 {
 		return nodes[0]
 	}
 
-	var nextLevel []*MerkleNode
+	var nextLevel []*Node[[]byte]
 
 	for i := 0; i < len(nodes); i += 2 {
 		left := nodes[i]
-		var right *MerkleNode
+		var right *Node[[]byte]
 		if i+1 < len(nodes) {
 			right = nodes[i+1]
 		} else {
-			right = mt.newNode(left.hash, nil, nil) // Duplicate last node if odd
+			right = &Node[[]byte]{Value: left.Value} // Duplicate last node if odd
 		}
 
-		parentHash := mt.hashChildren(left.hash, right.hash)
-		parent := mt.newNode(parentHash, left, right)
+		parentHash := mt.hashChildren(left.Value, right.Value)
+		parent := &Node[[]byte]{Value: parentHash, Children: []*Node[[]byte]{left, right}}
 		nextLevel = append(nextLevel, parent)
 	}
 
@@ -102,7 +88,7 @@ func (mt *MerkleTree) GetRoot() []byte {
 	if mt.root == nil {
 		return nil
 	}
-	return mt.root.hash
+	return mt.root.Value
 }
 
 // GetProof generates a Merkle proof for the data at the given index.
@@ -120,7 +106,7 @@ func (mt *MerkleTree) GetProof(index int) ([][]byte, error) {
 		sibling := mt.getSibling(current, isRightChild)
 
 		if sibling != nil {
-			proof = append(proof, sibling.hash)
+			proof = append(proof, sibling.Value)
 		}
 
 		current = mt.getParent(current)
@@ -138,7 +124,7 @@ func (mt *MerkleTree) VerifyProof(data []byte, proof [][]byte, rootHash []byte) 
 		computedHash = mt.hashChildren(computedHash, proofElement)
 	}
 
-	return bytes.Equal(computedHash, rootHash)
+	return comp.ByteSliceComparator(computedHash, rootHash) == 0
 }
 
 // hashData hashes the input data using the tree's hasher.
@@ -159,159 +145,92 @@ func (mt *MerkleTree) hashChildren(left, right []byte) []byte {
 	return h.Sum(nil)
 }
 
-// newNode creates a new MerkleNode, using the node pool for efficiency.
-func (mt *MerkleTree) newNode(hash []byte, left, right *MerkleNode) *MerkleNode {
-	node := mt.nodePool.Get().(*MerkleNode)
-	node.hash = hash
-	node.left = left
-	node.right = right
-	return node
-}
-
 // getSibling returns the sibling node of the given node.
-func (mt *MerkleTree) getSibling(node *MerkleNode, isRightChild bool) *MerkleNode {
+func (mt *MerkleTree) getSibling(node *Node[[]byte], isRightChild bool) *Node[[]byte] {
 	parent := mt.getParent(node)
 	if parent == nil {
 		return nil
 	}
 	if isRightChild {
-		return parent.left
+		return parent.Children[0]
 	}
-	return parent.right
+	return parent.Children[1]
 }
 
 // getParent returns the parent node of the given node.
-func (mt *MerkleTree) getParent(node *MerkleNode) *MerkleNode {
-	// This is a simplified implementation. In a full implementation,
-	// we would maintain parent pointers or use a more sophisticated
-	// method to find the parent.
-	var findParent func(*MerkleNode) *MerkleNode
-	findParent = func(current *MerkleNode) *MerkleNode {
-		if current == nil || (current.left != node && current.right != node) {
+func (mt *MerkleTree) getParent(node *Node[[]byte]) *Node[[]byte] {
+	var findParent func(*Node[[]byte]) *Node[[]byte]
+	findParent = func(current *Node[[]byte]) *Node[[]byte] {
+		if current == nil || len(current.Children) == 0 {
 			return nil
 		}
-		if current.left == node || current.right == node {
+		if current.Children[0] == node || current.Children[1] == node {
 			return current
 		}
-		left := findParent(current.left)
+		left := findParent(current.Children[0])
 		if left != nil {
 			return left
 		}
-		return findParent(current.right)
+		return findParent(current.Children[1])
 	}
 	return findParent(mt.root)
 }
 
-// Clear removes all nodes from the tree and returns them to the node pool.
-func (mt *MerkleTree) Clear() {
-	var clearNode func(*MerkleNode)
-	clearNode = func(node *MerkleNode) {
-		if node == nil {
-			return
-		}
-		clearNode(node.left)
-		clearNode(node.right)
-		node.hash = nil
-		node.left = nil
-		node.right = nil
-		mt.nodePool.Put(node)
-	}
-	clearNode(mt.root)
-	mt.root = nil
-	mt.leaves = nil
-}
-
-// Size returns the number of leaves in the Merkle Tree.
-func (mt *MerkleTree) Size() int {
-	return len(mt.leaves)
-}
-
-// IsEmpty returns true if the Merkle Tree has no nodes.
-func (mt *MerkleTree) IsEmpty() bool {
-	return mt.root == nil
-}
-
-// Iterator returns an iterator for the leaf nodes of the Merkle Tree.
-func (mt *MerkleTree) Iterator() collections.Iterator[[]byte] {
-	return &merkleTreeIterator{
-		tree:  mt,
-		index: 0,
-	}
-}
-
-func (mt *MerkleTree) ReverseIterator() collections.Iterator[[]byte] {
-	return &merkleTreeReverseIterator{
-		tree:  mt,
-		index: len(mt.leaves) - 1,
-	}
-}
-
-type merkleTreeReverseIterator struct {
-	tree  *MerkleTree
-	index int
-}
-
-func (it *merkleTreeReverseIterator) HasNext() bool {
-	return it.index >= 0
-}
-
-func (it *merkleTreeReverseIterator) Next() []byte {
-	if !it.HasNext() {
-		panic("no more elements")
-	}
-	hash := it.tree.leaves[it.index].hash
-	it.index--
-	return hash
-}
-
-type merkleTreeIterator struct {
-	tree  *MerkleTree
-	index int
-}
-
-func (it *merkleTreeIterator) HasNext() bool {
-	return it.index < len(it.tree.leaves)
-}
-
-func (it *merkleTreeIterator) Next() []byte {
-	if !it.HasNext() {
-		panic("no more elements")
-	}
-	hash := it.tree.leaves[it.index].hash
-	it.index++
-	return hash
-}
-
-// Ensure MerkleTree implements the Collection interface
-var _ collections.Collection[[]byte] = (*MerkleTree)(nil)
-
-// Add implements the Collection interface.
+// Add implements the Set interface.
 func (mt *MerkleTree) Add(item []byte) bool {
+	if mt.Contains(item) {
+		return false
+	}
 	hash := mt.hashData(item)
-	newLeaf := mt.newNode(hash, nil, nil)
+	newLeaf := &Node[[]byte]{Value: hash}
 	mt.leaves = append(mt.leaves, newLeaf)
 	mt.root = mt.buildTree(mt.leaves)
+	mt.size++
 	return true
 }
 
-// Remove is not efficiently supported for Merkle Trees and is left unimplemented.
+// Remove implements the Set interface.
 func (mt *MerkleTree) Remove(item []byte) bool {
-	// Not efficiently supported for Merkle Trees
+	// Not supported for Merkle Trees
 	return false
 }
 
-// Contains checks if the given item's hash is present in the tree's leaves.
+// Contains implements the Set interface.
 func (mt *MerkleTree) Contains(item []byte) bool {
 	hash := mt.hashData(item)
 	for _, leaf := range mt.leaves {
-		if bytes.Equal(leaf.hash, hash) {
+		if comp.ByteSliceComparator(leaf.Value, hash) == 0 {
 			return true
 		}
 	}
 	return false
 }
 
-// SetComparator is a no-op for Merkle Trees as they use hash comparisons.
-func (mt *MerkleTree) SetComparator(comp comp.Comparator[[]byte]) {
-	// No-op for Merkle Trees
+// ReverseIterator implements the Iterable interface.
+func (mt *MerkleTree) ReverseIterator() collections.Iterator[[]byte] {
+	return &merkleReverseIterator{
+		currentIndex: len(mt.leaves) - 1,
+		tree:         mt,
+	}
 }
+
+type merkleReverseIterator struct {
+	currentIndex int
+	tree         *MerkleTree
+}
+
+func (it *merkleReverseIterator) HasNext() bool {
+	return it.currentIndex >= 0
+}
+
+func (it *merkleReverseIterator) Next() []byte {
+	if !it.HasNext() {
+		panic("no more elements")
+	}
+	value := it.tree.leaves[it.currentIndex].Value
+	it.currentIndex--
+	return value
+}
+
+// Ensure MerkleTree implements the Set interface
+var _ collections.Set[[]byte] = (*MerkleTree)(nil)
