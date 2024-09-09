@@ -17,7 +17,7 @@ type BloomFilter struct {
 	bitset    []uint64
 	size      uint64
 	hashCount uint64
-	hasher    hash.Hasher[[]byte]
+	hasher    hash.Hasher
 }
 
 // NewBloomFilter creates a new Bloom filter with the given expected number of elements
@@ -30,7 +30,7 @@ type BloomFilter struct {
 //		log.Fatal(err)
 //	}
 func NewBloomFilter(expectedElements int, falsePositiveRate float64) (*BloomFilter, error) {
-	hasher, err := hash.NewSipHasher[[]byte]()
+	hasher, err := hash.NewSipHasher()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create default hasher: %w", err)
 	}
@@ -47,7 +47,7 @@ func NewBloomFilter(expectedElements int, falsePositiveRate float64) (*BloomFilt
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-func NewBloomFilterWithHasher(expectedElements int, falsePositiveRate float64, hasher hash.Hasher[[]byte]) (*BloomFilter, error) {
+func NewBloomFilterWithHasher(expectedElements int, falsePositiveRate float64, hasher hash.Hasher) (*BloomFilter, error) {
 	if expectedElements <= 0 {
 		return nil, errors.New("expected elements must be positive")
 	}
@@ -136,13 +136,10 @@ func (bf *BloomFilter) FalsePositiveRate() float64 {
 }
 
 func (bf *BloomFilter) hashValues(data []byte) (uint64, uint64) {
-	hashBytes, err := bf.hasher.Hash(data)
-	if err != nil {
-		panic(err) // In production, consider a more graceful error handling
-	}
-	h1 := binary.LittleEndian.Uint64(hashBytes)
-	h2 := h1 >> 32
-	return h1, h2
+	bf.hasher.Reset()
+	bf.hasher.Write(data)
+	h := bf.hasher.Sum(nil)
+	return binary.LittleEndian.Uint64(h[:8]), binary.LittleEndian.Uint64(h[8:16])
 }
 
 // index calculates the bit index for the i-th hash function.
@@ -218,7 +215,7 @@ func (bf *BloomFilter) UnmarshalBinary(data []byte) error {
 		bf.bitset[i] = binary.LittleEndian.Uint64(data[16+i*8:])
 	}
 	var err error
-	bf.hasher, err = hash.NewSipHasher[[]byte]()
+	bf.hasher, err = hash.NewSipHasher()
 	return err
 }
 

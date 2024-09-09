@@ -37,11 +37,11 @@ type baseTree[T any] struct {
 	root       *Node[T]
 	size       int
 	comparator comp.Comparator[T]
-	hasher     hash.Hasher[T]
+	hasher     hash.Hasher
 }
 
 // newBaseTree creates a new base tree
-func newBaseTree[T any](comparator comp.Comparator[T], hasher hash.Hasher[T]) *baseTree[T] {
+func newBaseTree[T any](comparator comp.Comparator[T], hasher hash.Hasher) *baseTree[T] {
 	return &baseTree[T]{
 		comparator: comparator,
 		hasher:     hasher,
@@ -72,6 +72,11 @@ func (t *baseTree[T]) IsEmpty() bool {
 // SetComparator sets the comparator for the tree
 func (t *baseTree[T]) SetComparator(comp comp.Comparator[T]) {
 	t.comparator = comp
+}
+
+// SetHasher sets the hasher for the tree
+func (t *baseTree[T]) SetHasher(h hash.Hasher) {
+	t.hasher = h
 }
 
 // Iterator returns an iterator over the tree's nodes

@@ -25,7 +25,7 @@ type HashMap[K any, V any] struct {
 	size       int
 	capacity   int
 	loadFactor float64
-	hasher     hash.Hasher[K]
+	hasher     hash.Hasher
 	comparator comp.Comparator[K]
 }
 
@@ -45,7 +45,7 @@ type entry[K any, V any] struct {
 //
 //	hm := maps.NewHashMap[string, int](collections.GenericComparator[string]())
 func NewHashMap[K any, V any](comparator comp.Comparator[K]) *HashMap[K, V] {
-	hasher, err := hash.NewSipHasher[K]()
+	hasher, err := hash.NewSipHasher()
 	if err != nil {
 		panic(err) // In production, consider handling this error more gracefully
 	}
@@ -59,7 +59,7 @@ func NewHashMap[K any, V any](comparator comp.Comparator[K]) *HashMap[K, V] {
 //
 //	customHasher := &MyCustomHasher{}
 //	hm := maps.NewHashMapWithHasher[string, int](collections.GenericComparator[string](), customHasher)
-func NewHashMapWithHasher[K any, V any](comparator comp.Comparator[K], hasher hash.Hasher[K]) *HashMap[K, V] {
+func NewHashMapWithHasher[K any, V any](comparator comp.Comparator[K], hasher hash.Hasher) *HashMap[K, V] {
 	h := &HashMap[K, V]{
 		capacity:   minCapacity,
 		loadFactor: defaultLoadFactor,
@@ -273,12 +273,14 @@ func (h *HashMap[K, V]) resize(newCapacity int) {
 
 // hashKey hashes the key using the HashMap's hasher.
 func (h *HashMap[K, V]) hashKey(key K) uint64 {
-	_hash, err := h.hasher.Hash(key)
-	hash := hash.HashBytesToUint64(_hash)
+	keyBytes, err := keyToBytes(key)
 	if err != nil {
-		panic(err)
+		panic(err) // In production, consider handling this error more gracefully
 	}
-	return hash
+	h.hasher.Reset()
+	h.hasher.Write(keyBytes)
+	hashBytes := h.hasher.Sum(nil)
+	return hash.HashBytesToUint64(hashBytes)
 }
 
 // hashToByte converts a hash to a control byte.
@@ -412,3 +414,15 @@ type T interface{}
 
 // Ensure HashMap implements the Map interface for T
 var _ collections.Map[T, any] = (*HashMap[T, any])(nil)
+
+// keyToBytes converts a key of any type to a byte slice
+func keyToBytes(key any) ([]byte, error) {
+	switch k := key.(type) {
+	case string:
+		return []byte(k), nil
+	case []byte:
+		return k, nil
+	default:
+		return hash.ToBinary(k)
+	}
+}

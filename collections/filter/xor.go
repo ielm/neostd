@@ -25,7 +25,7 @@ type XorFilter struct {
 	segmentCount       uint32
 	segmentCountLength uint32
 	seed               uint64
-	hasher             hash.Hasher[[]byte]
+	hasher             hash.Hasher
 }
 
 // NewXorFilter creates a new Xor filter with the given expected number of elements.
@@ -38,7 +38,7 @@ type XorFilter struct {
 //		log.Fatal(err)
 //	}
 func NewXorFilter(expectedElements int) (*XorFilter, error) {
-	hasher, err := hash.NewSipHasher[[]byte]()
+	hasher, err := hash.NewSipHasher()
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func NewXorFilter(expectedElements int) (*XorFilter, error) {
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-func NewXorFilterWithHasher(expectedElements int, hasher hash.Hasher[[]byte]) (*XorFilter, error) {
+func NewXorFilterWithHasher(expectedElements int, hasher hash.Hasher) (*XorFilter, error) {
 	if expectedElements <= 0 {
 		return nil, errors.New("expected elements must be positive")
 	}
@@ -196,15 +196,16 @@ func (xf *XorFilter) UnmarshalBinary(data []byte) error {
 
 	// Use the default SipHasher for deserialized XorFilters
 	var err error
-	xf.hasher, err = hash.NewSipHasher[[]byte]()
+	xf.hasher, err = hash.NewSipHasher()
 	return err
 }
 
 // Helper functions
 
 func (xf *XorFilter) hashValues(data []byte) (uint32, uint32, uint32) {
-	_h, _ := xf.hasher.Hash(data)
-	h := hash.HashBytesToUint64(_h)
+	xf.hasher.Reset()
+	xf.hasher.Write(data)
+	h := hash.HashBytesToUint64(xf.hasher.Sum(nil))
 	h1 := uint32(h) & (xf.segmentCountLength - 1)
 	h2 := uint32(h>>32) & (xf.segmentCountLength - 1)
 	h3 := xf.hash(uint64(h1) ^ uint64(h2))

@@ -12,7 +12,8 @@ const (
 )
 
 // TigerHasher implements the Tiger hash algorithm
-type TigerHasher[K any] struct {
+type TigerHasher struct {
+	BaseHasher
 	a, b, c uint64
 	x       [tigerBlockSize]byte
 	nx      int
@@ -20,28 +21,14 @@ type TigerHasher[K any] struct {
 }
 
 // NewTigerHasher creates a new TigerHasher
-func NewTigerHasher[K any]() *TigerHasher[K] {
-	return &TigerHasher[K]{
-		a: 0x0123456789ABCDEF,
-		b: 0xFEDCBA9876543210,
-		c: 0xF096A5B4C3B2E187,
-	}
-}
-
-// Hash computes the Tiger hash of the given key
-func (t *TigerHasher[K]) Hash(key K) ([]byte, error) {
-	data, err := keyToBytes(key)
-	if err != nil {
-		return nil, err
-	}
-
+func NewTigerHasher() *TigerHasher {
+	t := &TigerHasher{}
 	t.Reset()
-	t.Write(data)
-	return t.Sum(nil), nil
+	return t
 }
 
 // Write adds more data to the running hash
-func (t *TigerHasher[K]) Write(p []byte) (n int, err error) {
+func (t *TigerHasher) Write(p []byte) (n int, err error) {
 	n = len(p)
 	t.len += uint64(n)
 
@@ -65,18 +52,18 @@ func (t *TigerHasher[K]) Write(p []byte) (n int, err error) {
 		t.nx = copy(t.x[:], p)
 	}
 
-	return
+	return n, nil
 }
 
 // Sum appends the current hash to b and returns the resulting slice
-func (t *TigerHasher[K]) Sum(b []byte) []byte {
+func (t *TigerHasher) Sum(b []byte) []byte {
 	t0 := *t
 	hash := t0.checkSum()
 	return append(b, hash[:]...)
 }
 
 // Reset resets the hash to its initial state
-func (t *TigerHasher[K]) Reset() {
+func (t *TigerHasher) Reset() {
 	t.a = 0x0123456789ABCDEF
 	t.b = 0xFEDCBA9876543210
 	t.c = 0xF096A5B4C3B2E187
@@ -84,8 +71,33 @@ func (t *TigerHasher[K]) Reset() {
 	t.len = 0
 }
 
+// Size returns the number of bytes Sum will return
+func (t *TigerHasher) Size() int {
+	return tigerDigestSize
+}
+
+// BlockSize returns the hash's underlying block size
+func (t *TigerHasher) BlockSize() int {
+	return tigerBlockSize
+}
+
+// HashKey computes the Tiger hash of the given key
+func (t *TigerHasher) HashKey(key any) ([]byte, error) {
+	data, err := keyToBytes(key)
+	if err != nil {
+		return nil, err
+	}
+
+	t.Reset()
+	_, err = t.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	return t.Sum(nil), nil
+}
+
 // checkSum generates the final hash value
-func (t *TigerHasher[K]) checkSum() [tigerDigestSize]byte {
+func (t *TigerHasher) checkSum() [tigerDigestSize]byte {
 	len := t.len
 	// Padding
 	t.x[t.nx] = 0x01
@@ -111,7 +123,7 @@ func (t *TigerHasher[K]) checkSum() [tigerDigestSize]byte {
 }
 
 // compress is the core compression function of Tiger
-func (t *TigerHasher[K]) compress(block []byte) {
+func (t *TigerHasher) compress(block []byte) {
 	var x [8]uint64
 	for i := 0; i < 8; i++ {
 		x[i] = binary.LittleEndian.Uint64(block[i*8:])
@@ -149,7 +161,7 @@ func (t *TigerHasher[K]) compress(block []byte) {
 }
 
 // round performs a single round of the Tiger hash function
-func (t *TigerHasher[K]) round(a, b, c, x0, x1, x2, x3, x4, x5, x6, x7 uint64) (uint64, uint64, uint64) {
+func (t *TigerHasher) round(a, b, c, x0, x1, x2, x3, x4, x5, x6, x7 uint64) (uint64, uint64, uint64) {
 	c ^= x0
 	a -= t0[byte(c)] ^ t1[byte(c>>16)] ^ t2[byte(c>>32)] ^ t3[byte(c>>48)]
 	b += t3[byte(c>>8)] ^ t2[byte(c>>24)] ^ t1[byte(c>>40)] ^ t0[byte(c>>56)]
@@ -275,4 +287,4 @@ var tigerT1 = [256]uint64{
 }
 
 // Ensure TigerHasher implements the Hasher interface
-var _ Hasher[any] = (*TigerHasher[any])(nil)
+var _ Hasher = (*TigerHasher)(nil)

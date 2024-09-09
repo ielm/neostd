@@ -30,7 +30,7 @@ type CuckooFilter struct {
 	size       uint64   // Number of buckets
 	count      uint64   // Number of items in the filter
 	loadFactor float64  // Maximum load factor before resizing
-	hasher     hash.Hasher[[]byte]
+	hasher     hash.Hasher
 }
 
 // NewCuckooFilter creates a new Cuckoo filter with the given expected number of elements
@@ -43,7 +43,7 @@ type CuckooFilter struct {
 //	    log.Fatal(err)
 //	}
 func NewCuckooFilter(expectedElements int, falsePositiveRate float64) (*CuckooFilter, error) {
-	hasher, err := hash.NewSipHasher[[]byte]()
+	hasher, err := hash.NewSipHasher()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create default hasher: %w", err)
 	}
@@ -60,7 +60,7 @@ func NewCuckooFilter(expectedElements int, falsePositiveRate float64) (*CuckooFi
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func NewCuckooFilterWithHasher(expectedElements int, falsePositiveRate float64, hasher hash.Hasher[[]byte]) (*CuckooFilter, error) {
+func NewCuckooFilterWithHasher(expectedElements int, falsePositiveRate float64, hasher hash.Hasher) (*CuckooFilter, error) {
 	if expectedElements <= 0 {
 		return nil, errors.New("expected elements must be positive")
 	}
@@ -248,21 +248,23 @@ func (cf *CuckooFilter) UnmarshalBinary(data []byte) error {
 		cf.buckets[i] = binary.LittleEndian.Uint32(data[24+i*4:])
 	}
 	var err error
-	cf.hasher, err = hash.NewSipHasher[[]byte]()
+	cf.hasher, err = hash.NewSipHasher()
 	return err
 }
 
 // Helper functions
 
 func (cf *CuckooFilter) fingerprint(data []byte) uint8 {
-	_h, _ := cf.hasher.Hash(data)
-	h := hash.HashBytesToUint64(_h)
+	cf.hasher.Reset()
+	cf.hasher.Write(data)
+	h := hash.HashBytesToUint64(cf.hasher.Sum(nil))
 	return uint8(h&0xFF) | 1 // Ensure fingerprint is non-zero
 }
 
 func (cf *CuckooFilter) index(data []byte) uint64 {
-	_h, _ := cf.hasher.Hash(data)
-	h := hash.HashBytesToUint64(_h)
+	cf.hasher.Reset()
+	cf.hasher.Write(data)
+	h := hash.HashBytesToUint64(cf.hasher.Sum(nil))
 	return h % cf.size
 }
 
