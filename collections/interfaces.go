@@ -1,7 +1,7 @@
 package collections
 
 import (
-	"github.com/ielm/neostd/pkg/collections/comp"
+	"github.com/ielm/neostd/collections/comp"
 )
 
 // Iterable represents a collection that can be iterated over

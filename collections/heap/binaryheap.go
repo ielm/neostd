@@ -1,8 +1,8 @@
 package heap
 
 import (
-	"github.com/ielm/neostd/pkg/collections"
-	"github.com/ielm/neostd/pkg/collections/comp"
+	"github.com/ielm/neostd/collections"
+	"github.com/ielm/neostd/collections/comp"
 )
 
 // BinaryHeap is a priority queue implemented with a binary heap.

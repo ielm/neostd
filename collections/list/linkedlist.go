@@ -4,8 +4,8 @@ package list
 import (
 	"errors"
 
-	"github.com/ielm/neostd/pkg/collections"
-	"github.com/ielm/neostd/pkg/collections/comp"
+	"github.com/ielm/neostd/collections"
+	"github.com/ielm/neostd/collections/comp"
 )
 
 // Node represents a single element in the linked list.

@@ -1,6 +1,6 @@
 package cache
 
-import "github.com/ielm/neostd/pkg/collections/list"
+import "github.com/ielm/neostd/collections/list"
 
 // LFUPolicy implements the Least Frequently Used order policy
 type LFUPolicy[K any] struct {

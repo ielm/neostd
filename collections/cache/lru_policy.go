@@ -1,6 +1,6 @@
 package cache
 
-import "github.com/ielm/neostd/pkg/collections/list"
+import "github.com/ielm/neostd/collections/list"
 
 // LRUPolicy implements the Least Recently Used order policy
 type LRUPolicy[K any] struct {

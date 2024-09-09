@@ -5,8 +5,8 @@ import (
 	"errors"
 	"math"
 
-	"github.com/ielm/neostd/pkg/collections"
-	"github.com/ielm/neostd/pkg/hash"
+	"github.com/ielm/neostd/collections"
+	"github.com/ielm/neostd/hash"
 )
 
 const (

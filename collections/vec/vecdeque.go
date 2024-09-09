@@ -3,8 +3,8 @@ package vec
 import (
 	"errors"
 
-	"github.com/ielm/neostd/pkg/collections"
-	"github.com/ielm/neostd/pkg/collections/comp"
+	"github.com/ielm/neostd/collections"
+	"github.com/ielm/neostd/collections/comp"
 )
 
 // VecDeque is a double-ended queue implemented with a growable ring buffer.

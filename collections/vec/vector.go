@@ -3,8 +3,8 @@ package vec
 import (
 	"errors"
 
-	"github.com/ielm/neostd/pkg/collections"
-	"github.com/ielm/neostd/pkg/collections/comp"
+	"github.com/ielm/neostd/collections"
+	"github.com/ielm/neostd/collections/comp"
 )
 
 // Vec is a contiguous growable array type, similar to Rust's Vec.

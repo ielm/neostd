@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ielm/neostd/pkg/collections/comp"
-	"github.com/ielm/neostd/pkg/collections/maps"
+	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/collections/maps"
 )
 
 // Item represents a cache item
