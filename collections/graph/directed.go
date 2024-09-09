@@ -6,20 +6,20 @@ import (
 	"github.com/ielm/neostd/collections/comp"
 )
 
-// DirectedGraph represents a directed graph
-type DirectedGraph[V comparable, E any] struct {
+// DiGraph represents a directed graph
+type DiGraph[V comparable, E any] struct {
 	*baseGraph[V, E]
 }
 
-// NewDirectedGraph creates a new directed graph
-func NewDirectedGraph[V comparable, E any](comparator comp.Comparator[V]) *DirectedGraph[V, E] {
-	return &DirectedGraph[V, E]{
+// NewDiGraph creates a new directed graph
+func NewDiGraph[V comparable, E any](comparator comp.Comparator[V]) *DiGraph[V, E] {
+	return &DiGraph[V, E]{
 		baseGraph: newBaseGraph[V, E](comparator),
 	}
 }
 
 // AddEdge adds a directed edge to the graph
-func (g *DirectedGraph[V, E]) AddEdge(source, destination V, weight E) error {
+func (g *DiGraph[V, E]) AddEdge(source, destination V, weight E) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -38,7 +38,7 @@ func (g *DirectedGraph[V, E]) AddEdge(source, destination V, weight E) error {
 }
 
 // RemoveEdge removes a directed edge from the graph
-func (g *DirectedGraph[V, E]) RemoveEdge(source, destination V) error {
+func (g *DiGraph[V, E]) RemoveEdge(source, destination V) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -55,12 +55,12 @@ func (g *DirectedGraph[V, E]) RemoveEdge(source, destination V) error {
 }
 
 // GetEdge returns the edge between two vertices
-func (g *DirectedGraph[V, E]) GetEdge(source, destination V) (E, bool) {
+func (g *DiGraph[V, E]) GetEdge(source, destination V) (E, bool) {
 	return g.GetWeight(source, destination)
 }
 
 // GetEdges returns all edges from a vertex
-func (g *DirectedGraph[V, E]) GetEdges(vertex V) []Edge[V, E] {
+func (g *DiGraph[V, E]) GetEdges(vertex V) []Edge[V, E] {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -77,4 +77,4 @@ func (g *DirectedGraph[V, E]) GetEdges(vertex V) []Edge[V, E] {
 }
 
 // Ensure DirectedGraph implements the Graph interface
-var _ Graph[string, int] = (*DirectedGraph[string, int])(nil)
+var _ Graph[string, int] = (*DiGraph[string, int])(nil)

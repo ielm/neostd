@@ -6,20 +6,20 @@ import (
 	"github.com/ielm/neostd/collections/comp"
 )
 
-// UndirectedGraph represents an undirected graph
-type UndirectedGraph[V comparable, E any] struct {
+// UGraph represents an undirected graph
+type UGraph[V comparable, E any] struct {
 	*baseGraph[V, E]
 }
 
-// NewUndirectedGraph creates a new undirected graph
-func NewUndirectedGraph[V comparable, E any](comparator comp.Comparator[V]) *UndirectedGraph[V, E] {
-	return &UndirectedGraph[V, E]{
+// NewUGraph creates a new undirected graph
+func NewUGraph[V comparable, E any](comparator comp.Comparator[V]) *UGraph[V, E] {
+	return &UGraph[V, E]{
 		baseGraph: newBaseGraph[V, E](comparator),
 	}
 }
 
 // AddEdge adds an undirected edge to the graph
-func (g *UndirectedGraph[V, E]) AddEdge(source, destination V, weight E) error {
+func (g *UGraph[V, E]) AddEdge(source, destination V, weight E) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -40,7 +40,7 @@ func (g *UndirectedGraph[V, E]) AddEdge(source, destination V, weight E) error {
 }
 
 // RemoveEdge removes an undirected edge from the graph
-func (g *UndirectedGraph[V, E]) RemoveEdge(source, destination V) error {
+func (g *UGraph[V, E]) RemoveEdge(source, destination V) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -63,12 +63,12 @@ func (g *UndirectedGraph[V, E]) RemoveEdge(source, destination V) error {
 }
 
 // GetEdge returns the edge between two vertices
-func (g *UndirectedGraph[V, E]) GetEdge(source, destination V) (E, bool) {
+func (g *UGraph[V, E]) GetEdge(source, destination V) (E, bool) {
 	return g.GetWeight(source, destination)
 }
 
 // GetEdges returns all edges from a vertex
-func (g *UndirectedGraph[V, E]) GetEdges(vertex V) []Edge[V, E] {
+func (g *UGraph[V, E]) GetEdges(vertex V) []Edge[V, E] {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -85,4 +85,4 @@ func (g *UndirectedGraph[V, E]) GetEdges(vertex V) []Edge[V, E] {
 }
 
 // Ensure UndirectedGraph implements the Graph interface
-var _ Graph[string, int] = (*UndirectedGraph[string, int])(nil)
+var _ Graph[string, int] = (*UGraph[string, int])(nil)
