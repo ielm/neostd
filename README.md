@@ -20,7 +20,7 @@ go get github.com/ielm/neostd
 
 ## Features
 
-neostd currently includes the following components
+neostd currently includes the following components:
 
 ### Collections
 
@@ -43,15 +43,28 @@ neostd currently includes the following components
 - **CuckooFilter**: Space-efficient probabilistic data structure with support for deletions
 - **XorFilter**: Another space-efficient probabilistic data structure for set membership testing
 
+### Trees
+
+- **MerkleTree**: A tree in which every leaf node is labelled with the hash of a data block, and every non-leaf node is labelled with the cryptographic hash of the labels of its child nodes
+
 ### Hashing
 
 - **SipHasher**: Implementation of the SipHash algorithm
+- **TigerHasher**: Implementation of the Tiger hash algorithm
 
 ### Utilities
 
 - **Comparators**: Generic comparison functions for ordered types
 
 ## Usage
+
+To use neostd in your Go project, you can import it using `import`:
+
+```go
+import (
+    "github.com/ielm/neostd"
+)
+```
 
 Here are some examples of how to use neostd components:
 
@@ -206,6 +219,46 @@ if err != nil {
 // Hash a string
 hash := hasher.Hash([]byte("example"))
 fmt.Println(hash) // Output: [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128]
+```
+
+### Tiger Hasher
+
+```go
+import "github.com/ielm/neostd/hash"
+
+// Create a new TigerHasher
+hasher := hash.NewTigerHasher()
+
+// Hash a string
+hasher.Write([]byte("example"))
+hash := hasher.Sum(nil)
+fmt.Println(hash)
+```
+
+### Merkle Tree
+
+```go
+import "github.com/ielm/neostd/collections/tree"
+
+// Create a new Merkle Tree
+data := [][]byte{
+    []byte("data1"),
+    []byte("data2"),
+    []byte("data3"),
+}
+mt, err := tree.NewMerkleTree(data)
+if err != nil {
+    panic(err)
+}
+
+// Get the root hash
+rootHash := mt.RootHash()
+fmt.Printf("Root hash: %x\n", rootHash)
+
+// Verify data
+if mt.Verify([]byte("data2")) {
+    fmt.Println("Data verified successfully")
+}
 ```
 
 For more detailed usage examples, please refer to the documentation of each package.
