@@ -54,3 +54,14 @@ func Max[T constraints.Ordered](a, b T) T {
 	}
 	return b
 }
+
+// ByteSliceComparator compares two byte slices lexicographically
+func ByteSliceComparator(a, b []byte) int {
+	minLen := Min(len(a), len(b))
+	for i := 0; i < minLen; i++ {
+		if a[i] != b[i] {
+			return int(a[i]) - int(b[i])
+		}
+	}
+	return len(a) - len(b)
+}
