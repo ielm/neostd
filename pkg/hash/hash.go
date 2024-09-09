@@ -10,7 +10,7 @@ import (
 
 // Hasher is an interface for hash functions
 type Hasher[K any] interface {
-	Hash(key K) (uint64, error)
+	Hash(key K) ([]byte, error)
 }
 
 // SipHasher implements the SipHash 1-3 algorithm
@@ -28,12 +28,18 @@ func NewSipHasher[K any]() (*SipHasher[K], error) {
 }
 
 // Hash computes the hash of the given key using SipHash 1-3
-func (s *SipHasher[K]) Hash(key K) (uint64, error) {
+func (s *SipHasher[K]) Hash(key K) ([]byte, error) {
 	data, err := keyToBytes(key)
 	if err != nil {
-		return 0, fmt.Errorf("failed to convert key to bytes: %w", err)
+		return nil, fmt.Errorf("failed to convert key to bytes: %w", err)
 	}
-	return sipHash13(s.k0, s.k1, data), nil
+	hashValue := sipHash13(s.k0, s.k1, data)
+	return uint64ToBytes(hashValue), nil
+}
+
+// hash bytes to uint64
+func HashBytesToUint64(data []byte) uint64 {
+	return binary.LittleEndian.Uint64(data)
 }
 
 // keyToBytes converts a key of any type to a byte slice
@@ -162,4 +168,11 @@ func generateRandomKeys() (uint64, uint64, error) {
 		return 0, 0, fmt.Errorf("failed to read random bytes: %w", err)
 	}
 	return binary.LittleEndian.Uint64(b[:8]), binary.LittleEndian.Uint64(b[8:]), nil
+}
+
+// uint64ToBytes converts a uint64 to a byte slice
+func uint64ToBytes(value uint64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, value)
+	return b
 }
