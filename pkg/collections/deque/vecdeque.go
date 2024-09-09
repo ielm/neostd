@@ -1,9 +1,10 @@
-package vector
+package deque
 
 import (
 	"errors"
 
 	"github.com/ielm/neostd/pkg/collections"
+	"github.com/ielm/neostd/pkg/collections/comp"
 )
 
 // VecDeque is a double-ended queue implemented with a growable ring buffer.
@@ -13,7 +14,7 @@ type VecDeque[T any] struct {
 	tail       int
 	len        int
 	cap        int
-	comparator collections.Comparator[T]
+	comparator comp.Comparator[T]
 }
 
 // NewVecDeque creates a new VecDeque with the given capacity.
@@ -28,7 +29,7 @@ func NewVecDeque[T any](capacity int) *VecDeque[T] {
 }
 
 // VecDequeWithCapacity creates a new VecDeque with the given capacity and comparator.
-func VecDequeWithCapacity[T any](capacity int, comparator collections.Comparator[T]) *VecDeque[T] {
+func VecDequeWithCapacity[T any](capacity int, comparator comp.Comparator[T]) *VecDeque[T] {
 	return &VecDeque[T]{
 		buf:        make([]T, capacity),
 		cap:        capacity,
@@ -174,7 +175,7 @@ func (vd *VecDeque[T]) Grow(newCap int) {
 }
 
 // SetComparator sets the comparator for the VecDeque.
-func (vd *VecDeque[T]) SetComparator(comparator collections.Comparator[T]) {
+func (vd *VecDeque[T]) SetComparator(comparator comp.Comparator[T]) {
 	vd.comparator = comparator
 }
 

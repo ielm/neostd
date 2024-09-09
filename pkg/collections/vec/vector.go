@@ -1,9 +1,10 @@
-package vector
+package vec
 
 import (
 	"errors"
 
 	"github.com/ielm/neostd/pkg/collections"
+	"github.com/ielm/neostd/pkg/collections/comp"
 )
 
 // Vec is a contiguous growable array type, similar to Rust's Vec.
@@ -11,7 +12,7 @@ type Vec[T any] struct {
 	data       []T
 	len        int
 	cap        int
-	comparator collections.Comparator[T]
+	comparator comp.Comparator[T]
 }
 
 // New creates a new empty Vec without allocating memory.
@@ -24,7 +25,7 @@ func New[T any]() *Vec[T] {
 }
 
 // VecWithCapacity creates a new Vec with the given capacity and comparator.
-func VecWithCapacity[T any](capacity int, comparator collections.Comparator[T]) *Vec[T] {
+func VecWithCapacity[T any](capacity int, comparator comp.Comparator[T]) *Vec[T] {
 	return &Vec[T]{
 		data:       make([]T, 0, capacity),
 		len:        0,
@@ -123,7 +124,7 @@ func (v *Vec[T]) Grow(newCap int) {
 }
 
 // SetComparator sets the comparator for the Vec.
-func (v *Vec[T]) SetComparator(comparator collections.Comparator[T]) {
+func (v *Vec[T]) SetComparator(comparator comp.Comparator[T]) {
 	v.comparator = comparator
 }
 

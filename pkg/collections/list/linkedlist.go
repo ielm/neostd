@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/ielm/neostd/pkg/collections"
+	"github.com/ielm/neostd/pkg/collections/comp"
 )
 
 // Node represents a single element in the linked list.
@@ -31,7 +32,7 @@ type LinkedList[T any] struct {
 	head       *Node[T]
 	tail       *Node[T]
 	size       int
-	comparator collections.Comparator[T]
+	comparator comp.Comparator[T]
 }
 
 // NewLinkedList creates and returns a new empty LinkedList.
@@ -40,7 +41,7 @@ func NewLinkedList[T any]() *LinkedList[T] {
 }
 
 // SetComparator sets the comparator function for the list.
-func (l *LinkedList[T]) SetComparator(comp collections.Comparator[T]) {
+func (l *LinkedList[T]) SetComparator(comp comp.Comparator[T]) {
 	l.comparator = comp
 }
 

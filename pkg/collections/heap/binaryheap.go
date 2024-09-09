@@ -2,13 +2,14 @@ package heap
 
 import (
 	"github.com/ielm/neostd/pkg/collections"
+	"github.com/ielm/neostd/pkg/collections/comp"
 )
 
 // BinaryHeap is a priority queue implemented with a binary heap.
 // By default, this is a max-heap. To use it as a min-heap, use the NewMinBinaryHeap function.
 type BinaryHeap[T any] struct {
 	data       []T
-	comparator collections.Comparator[T]
+	comparator comp.Comparator[T]
 }
 
 // NewBinaryHeap creates a new BinaryHeap with the given comparator.
@@ -17,7 +18,7 @@ type BinaryHeap[T any] struct {
 // Example:
 //
 //	maxHeap := heap.NewBinaryHeap(collections.GenericComparator[int]())
-func NewBinaryHeap[T any](comparator collections.Comparator[T]) *BinaryHeap[T] {
+func NewBinaryHeap[T any](comparator comp.Comparator[T]) *BinaryHeap[T] {
 	return &BinaryHeap[T]{
 		data:       make([]T, 0),
 		comparator: comparator,
@@ -30,7 +31,7 @@ func NewBinaryHeap[T any](comparator collections.Comparator[T]) *BinaryHeap[T] {
 // Example:
 //
 //	minHeap := heap.NewMinBinaryHeap(collections.GenericComparator[int]())
-func NewMinBinaryHeap[T any](comparator collections.Comparator[T]) *BinaryHeap[T] {
+func NewMinBinaryHeap[T any](comparator comp.Comparator[T]) *BinaryHeap[T] {
 	return &BinaryHeap[T]{
 		data: make([]T, 0),
 		comparator: func(a, b T) int {
@@ -215,7 +216,7 @@ func (h *BinaryHeap[T]) IntoSortedVec() []T {
 //	heap.SetComparator(func(a, b int) int {
 //		return b - a // Reverse order
 //	})
-func (h *BinaryHeap[T]) SetComparator(comparator collections.Comparator[T]) {
+func (h *BinaryHeap[T]) SetComparator(comparator comp.Comparator[T]) {
 	h.comparator = comparator
 	for i := len(h.data)/2 - 1; i >= 0; i-- {
 		h.siftDown(i)

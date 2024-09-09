@@ -1,4 +1,4 @@
-package collections
+package comp
 
 import "golang.org/x/exp/constraints"
 

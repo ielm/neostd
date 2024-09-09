@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ielm/neostd/pkg/collections"
+	"github.com/ielm/neostd/pkg/collections/comp"
 	"github.com/ielm/neostd/pkg/collections/maps"
 )
 
@@ -30,13 +30,13 @@ type Cache[K any] struct {
 	items      *maps.HashMap[K, *Item[K]]
 	policy     OrderPolicy[K]
 	mutex      sync.RWMutex
-	comparator collections.Comparator[K]
+	comparator comp.Comparator[K]
 }
 
 // NewCache creates a new cache with the given capacity and order policy
 // The comparator is used to compare keys in the cache, it's used by the underlying map
 // to find the item in O(1) time
-func NewCache[K any](capacity int, policy OrderPolicy[K], comparator collections.Comparator[K]) *Cache[K] {
+func NewCache[K any](capacity int, policy OrderPolicy[K], comparator comp.Comparator[K]) *Cache[K] {
 	return &Cache[K]{
 		capacity:   capacity,
 		items:      maps.NewHashMap[K, *Item[K]](comparator),

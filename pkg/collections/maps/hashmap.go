@@ -5,6 +5,7 @@ import (
 	"unsafe"
 
 	"github.com/ielm/neostd/pkg/collections"
+	"github.com/ielm/neostd/pkg/collections/comp"
 	"github.com/ielm/neostd/pkg/hash"
 )
 
@@ -25,7 +26,7 @@ type HashMap[K any, V any] struct {
 	capacity   int
 	loadFactor float64
 	hasher     hash.Hasher[K]
-	comparator collections.Comparator[K]
+	comparator comp.Comparator[K]
 }
 
 // entry struct definition
@@ -43,7 +44,7 @@ type entry[K any, V any] struct {
 // Example:
 //
 //	hm := maps.NewHashMap[string, int](collections.GenericComparator[string]())
-func NewHashMap[K any, V any](comparator collections.Comparator[K]) *HashMap[K, V] {
+func NewHashMap[K any, V any](comparator comp.Comparator[K]) *HashMap[K, V] {
 	hasher, err := hash.NewSipHasher[K]()
 	if err != nil {
 		panic(err) // In production, consider handling this error more gracefully
@@ -58,7 +59,7 @@ func NewHashMap[K any, V any](comparator collections.Comparator[K]) *HashMap[K, 
 //
 //	customHasher := &MyCustomHasher{}
 //	hm := maps.NewHashMapWithHasher[string, int](collections.GenericComparator[string](), customHasher)
-func NewHashMapWithHasher[K any, V any](comparator collections.Comparator[K], hasher hash.Hasher[K]) *HashMap[K, V] {
+func NewHashMapWithHasher[K any, V any](comparator comp.Comparator[K], hasher hash.Hasher[K]) *HashMap[K, V] {
 	h := &HashMap[K, V]{
 		capacity:   minCapacity,
 		loadFactor: defaultLoadFactor,
@@ -393,7 +394,7 @@ func (h *HashMap[K, V]) ContainsKey(key K) bool {
 //		// Custom comparison logic
 //		return a.CompareTo(b)
 //	})
-func (h *HashMap[K, V]) SetComparator(comp collections.Comparator[K]) {
+func (h *HashMap[K, V]) SetComparator(comp comp.Comparator[K]) {
 	h.comparator = comp
 }
 

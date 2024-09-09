@@ -1,5 +1,9 @@
 package collections
 
+import (
+	"github.com/ielm/neostd/pkg/collections/comp"
+)
+
 // Iterable represents a collection that can be iterated over
 type Iterable[T any] interface {
 	Iterator() Iterator[T]
@@ -25,7 +29,7 @@ type Collection[T any] interface {
 	Size() int
 	Clear()
 	IsEmpty() bool
-	SetComparator(comp Comparator[T])
+	SetComparator(comp comp.Comparator[T])
 }
 
 // List represents an ordered collection
@@ -68,7 +72,7 @@ type Map[K comparable, V any] interface {
 	ContainsKey(key K) bool
 	Keys() []K
 	Values() []V
-	SetComparator(comp Comparator[K])
+	SetComparator(comp comp.Comparator[K])
 }
 
 // ProbabilisticSet represents a probabilistic set data structure
