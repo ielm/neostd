@@ -14,12 +14,12 @@ type Vec[T any] struct {
 	comparator collections.Comparator[T]
 }
 
-// New creates a new Vec with the given capacity.
-func New[T any](capacity int) *Vec[T] {
+// New creates a new empty Vec without allocating memory.
+func New[T any]() *Vec[T] {
 	return &Vec[T]{
-		data: make([]T, 0, capacity),
+		data: nil,
 		len:  0,
-		cap:  capacity,
+		cap:  0,
 	}
 }
 
@@ -38,7 +38,12 @@ func (v *Vec[T]) Push(item T) {
 	if v.len == v.cap {
 		v.grow()
 	}
-	v.data = append(v.data, item)
+	if v.cap == 0 {
+		v.data = make([]T, 1)
+	} else {
+		v.data = v.data[:v.len+1]
+	}
+	v.data[v.len] = item
 	v.len++
 }
 
@@ -109,7 +114,9 @@ func (v *Vec[T]) grow() {
 func (v *Vec[T]) Grow(newCap int) {
 	if newCap > v.cap {
 		newData := make([]T, v.len, newCap)
-		copy(newData, v.data)
+		if v.data != nil {
+			copy(newData, v.data)
+		}
 		v.data = newData
 		v.cap = newCap
 	}
