@@ -83,3 +83,9 @@ type ProbabilisticSet[T any] interface {
 	Size() int
 	IsEmpty() bool
 }
+
+// SortedSet represents an ordered set with additional operations
+type SortedSet[T any] interface {
+	Set[T]
+	Get(item T) (T, bool)
+}
