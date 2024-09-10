@@ -32,10 +32,10 @@ func (r Result[T]) IsErr() bool {
 	return !r.isOk
 }
 
-// Unwrap returns the contained Ok value if the Result is Ok, otherwise panics.
+// Unwrap returns the contained Ok value if the Result is Ok, otherwise panics with a custom error.
 func (r Result[T]) Unwrap() T {
 	if !r.isOk {
-		panic(fmt.Sprintf("called Result.Unwrap() on an Err value: %v", r.err))
+		panic(errors.New(errors.ErrUnwrapOnErr, fmt.Sprintf("called Result.Unwrap() on an Err value: %v", r.err)))
 	}
 	return r.value
 }
