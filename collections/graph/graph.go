@@ -1,12 +1,12 @@
 package graph
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/collections/maps"
+	"github.com/ielm/neostd/errors"
 )
 
 // Edge represents an edge in the graph
@@ -176,10 +176,10 @@ func (g *baseGraph[V, E]) SetWeight(source, destination V, weight E) error {
 
 	edges, exists := g.vertices.Get(source)
 	if !exists {
-		return errors.New("source vertex not found")
+		return errors.New(errors.ErrNotFound, "source vertex not found")
 	}
 	if _, exists := edges.Get(destination); !exists {
-		return errors.New("edge not found")
+		return errors.New(errors.ErrNotFound, "edge not found")
 	}
 	edges.Put(destination, weight)
 	return nil

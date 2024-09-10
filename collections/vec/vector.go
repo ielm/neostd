@@ -1,10 +1,9 @@
 package vec
 
 import (
-	"errors"
-
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/errors"
 )
 
 // Vec is a contiguous growable array type, similar to Rust's Vec.
@@ -66,7 +65,7 @@ func (v *Vec[T]) Pop() (T, bool) {
 func (v *Vec[T]) Get(index int) (T, error) {
 	if index < 0 || index >= v.len {
 		var zero T
-		return zero, errors.New("index out of bounds")
+		return zero, errors.New(errors.ErrOutOfBounds, "index out of bounds")
 	}
 	return v.data[index], nil
 }
@@ -75,7 +74,7 @@ func (v *Vec[T]) Get(index int) (T, error) {
 // If the index is out of bounds, it returns an error.
 func (v *Vec[T]) Set(index int, item T) error {
 	if index < 0 || index >= v.len {
-		return errors.New("index out of bounds")
+		return errors.New(errors.ErrOutOfBounds, "index out of bounds")
 	}
 	v.data[index] = item
 	return nil
@@ -170,7 +169,7 @@ func (v *Vec[T]) Remove(item T) bool {
 // If the index is out of bounds, it returns an error.
 func (v *Vec[T]) RemoveAt(index int) error {
 	if index < 0 || index >= v.len {
-		return errors.New("index out of bounds")
+		return errors.New(errors.ErrOutOfBounds, "index out of bounds")
 	}
 	copy(v.data[index:], v.data[index+1:])
 	v.len--

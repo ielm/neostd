@@ -2,12 +2,11 @@ package filter
 
 import (
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"math"
 	"math/bits"
 
 	"github.com/ielm/neostd/collections"
+	"github.com/ielm/neostd/errors"
 	"github.com/ielm/neostd/hash"
 )
 
@@ -45,7 +44,8 @@ type CuckooFilter struct {
 func NewCuckooFilter(expectedElements int, falsePositiveRate float64) (*CuckooFilter, error) {
 	hasher, err := hash.NewSipHasher()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create default hasher: %w", err)
+		// return nil, fmt.Errorf("failed to create default hasher: %w", err)
+		return nil, errors.New(errors.ErrConstructionFailed, "failed to create default hasher")
 	}
 	return NewCuckooFilterWithHasher(expectedElements, falsePositiveRate, hasher)
 }
@@ -62,10 +62,10 @@ func NewCuckooFilter(expectedElements int, falsePositiveRate float64) (*CuckooFi
 //	}
 func NewCuckooFilterWithHasher(expectedElements int, falsePositiveRate float64, hasher hash.Hasher) (*CuckooFilter, error) {
 	if expectedElements <= 0 {
-		return nil, errors.New("expected elements must be positive")
+		return nil, errors.New(errors.ErrInvalidArgument, "expected elements must be positive")
 	}
 	if falsePositiveRate <= 0 || falsePositiveRate >= 1 {
-		return nil, errors.New("false positive rate must be between 0 and 1")
+		return nil, errors.New(errors.ErrInvalidArgument, "false positive rate must be between 0 and 1")
 	}
 
 	size := nextPowerOfTwo(uint64(float64(expectedElements) / falsePositiveRate))
@@ -238,7 +238,7 @@ func (cf *CuckooFilter) MarshalBinary() ([]byte, error) {
 //	}
 func (cf *CuckooFilter) UnmarshalBinary(data []byte) error {
 	if len(data) < 24 {
-		return errors.New("invalid data length")
+		return errors.New(errors.ErrInvalidArgument, "invalid data length")
 	}
 	cf.size = binary.LittleEndian.Uint64(data[0:8])
 	cf.count = binary.LittleEndian.Uint64(data[8:16])

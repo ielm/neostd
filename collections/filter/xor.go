@@ -2,10 +2,10 @@ package filter
 
 import (
 	"encoding/binary"
-	"errors"
 	"math"
 
 	"github.com/ielm/neostd/collections"
+	"github.com/ielm/neostd/errors"
 	"github.com/ielm/neostd/hash"
 )
 
@@ -57,7 +57,7 @@ func NewXorFilter(expectedElements int) (*XorFilter, error) {
 //	}
 func NewXorFilterWithHasher(expectedElements int, hasher hash.Hasher) (*XorFilter, error) {
 	if expectedElements <= 0 {
-		return nil, errors.New("expected elements must be positive")
+		return nil, errors.New(errors.ErrInvalidArgument, "expected elements must be positive")
 	}
 
 	capacity := nextPowerOfTwo(uint64(math.Ceil(float64(expectedElements) * 1.23)))
@@ -183,7 +183,7 @@ func (xf *XorFilter) MarshalBinary() ([]byte, error) {
 //	}
 func (xf *XorFilter) UnmarshalBinary(data []byte) error {
 	if len(data) < 28 {
-		return errors.New("invalid data length")
+		return errors.New(errors.ErrInvalidArgument, "invalid data length")
 	}
 	xf.blockLength = binary.LittleEndian.Uint32(data[0:4])
 	xf.segmentLength = binary.LittleEndian.Uint32(data[4:8])

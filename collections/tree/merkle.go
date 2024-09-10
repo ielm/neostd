@@ -3,13 +3,13 @@ package tree
 import (
 	"bytes"
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"math/bits"
 	"sync"
 
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/errors"
 	"github.com/ielm/neostd/hash"
 )
 
@@ -25,7 +25,7 @@ type MerkleTree struct {
 // NewMerkleTree creates a new Merkle Tree from the given data.
 func NewMerkleTree(data [][]byte) (*MerkleTree, error) {
 	if len(data) == 0 {
-		return nil, errors.New("cannot create tree with no data")
+		return nil, errors.New(errors.ErrInvalidArgument, "cannot create tree with no data")
 	}
 
 	hasher, err := hash.NewSipHasher()
@@ -48,7 +48,7 @@ func NewMerkleTree(data [][]byte) (*MerkleTree, error) {
 // NewWithHasher creates a new Merkle Tree with a custom SipHasher.
 func NewWithHasher(data [][]byte, hasher *hash.SipHasher) (*MerkleTree, error) {
 	if len(data) == 0 {
-		return nil, errors.New("cannot create tree with no data")
+		return nil, errors.New(errors.ErrInvalidArgument, "cannot create tree with no data")
 	}
 
 	mt := &MerkleTree{
@@ -66,7 +66,7 @@ func NewWithHasher(data [][]byte, hasher *hash.SipHasher) (*MerkleTree, error) {
 // Build constructs the Merkle Tree from the given data.
 func (mt *MerkleTree) Build(data [][]byte) error {
 	if len(data) == 0 {
-		return errors.New("cannot build tree with no data")
+		return errors.New(errors.ErrInvalidArgument, "cannot build tree with no data")
 	}
 
 	mt.leaves = make([]*Node[[]byte], len(data))
@@ -124,7 +124,7 @@ func (mt *MerkleTree) GetRoot() []byte {
 // GetProof generates a Merkle proof for the data at the given index.
 func (mt *MerkleTree) GetProof(index int) ([][]byte, error) {
 	if index < 0 || index >= len(mt.leaves) {
-		return nil, errors.New("index out of range")
+		return nil, errors.New(errors.ErrOutOfBounds, "index out of range")
 	}
 
 	proof := make([][]byte, 0, bits.Len(uint(len(mt.leaves)-1)))
@@ -160,7 +160,7 @@ func (mt *MerkleTree) VerifyProof(data []byte, proof [][]byte, rootHash []byte) 
 // Update updates the value at the given index and recalculates the affected hashes.
 func (mt *MerkleTree) Update(index int, newData []byte) error {
 	if index < 0 || index >= len(mt.leaves) {
-		return errors.New("index out of range")
+		return errors.New(errors.ErrOutOfBounds, "index out of range")
 	}
 
 	newHash := mt.hashData(newData)
@@ -192,7 +192,7 @@ func (mt *MerkleTree) Update(index int, newData []byte) error {
 // Diff returns the indices of leaves that differ between this tree and another.
 func (mt *MerkleTree) Diff(other *MerkleTree) ([]int, error) {
 	if len(mt.leaves) != len(other.leaves) {
-		return nil, errors.New("trees have different sizes")
+		return nil, errors.New(errors.ErrInvalidArgument, "trees have different sizes")
 	}
 
 	diffIndices := []int{}

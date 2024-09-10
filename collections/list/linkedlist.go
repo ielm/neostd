@@ -2,10 +2,9 @@
 package list
 
 import (
-	"errors"
-
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/errors"
 )
 
 // Node represents a single element in the linked list.
@@ -211,7 +210,7 @@ func (l *LinkedList[T]) RemoveLast() (T, bool) {
 func (l *LinkedList[T]) Get(index int) (T, error) {
 	if index < 0 || index >= l.size {
 		var zero T
-		return zero, errors.New("index out of bounds")
+		return zero, errors.New(errors.ErrOutOfBounds, "index out of bounds")
 	}
 	return l.getNode(index).value, nil
 }
@@ -228,7 +227,7 @@ func (l *LinkedList[T]) getNode(index int) *Node[T] {
 func (l *LinkedList[T]) RemoveFirst() (T, error) {
 	if l.IsEmpty() {
 		var zero T
-		return zero, errors.New("list is empty")
+		return zero, errors.New(errors.ErrOutOfBounds, "list is empty")
 	}
 	value := l.head.value
 	l.RemoveNode(l.head)
@@ -239,7 +238,7 @@ func (l *LinkedList[T]) RemoveFirst() (T, error) {
 func (l *LinkedList[T]) RemoveAt(index int) (T, error) {
 	if index < 0 || index >= l.size {
 		var zero T
-		return zero, errors.New("index out of bounds")
+		return zero, errors.New(errors.ErrOutOfBounds, "index out of bounds")
 	}
 
 	node := l.getNode(index)

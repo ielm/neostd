@@ -2,12 +2,11 @@ package filter
 
 import (
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"math"
 	"math/bits"
 
 	"github.com/ielm/neostd/collections"
+	"github.com/ielm/neostd/errors"
 	"github.com/ielm/neostd/hash"
 )
 
@@ -32,7 +31,7 @@ type BloomFilter struct {
 func NewBloomFilter(expectedElements int, falsePositiveRate float64) (*BloomFilter, error) {
 	hasher, err := hash.NewSipHasher()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create default hasher: %w", err)
+		return nil, errors.New(errors.ErrConstructionFailed, "failed to create default hasher")
 	}
 	return NewBloomFilterWithHasher(expectedElements, falsePositiveRate, hasher)
 }
@@ -49,10 +48,10 @@ func NewBloomFilter(expectedElements int, falsePositiveRate float64) (*BloomFilt
 //	}
 func NewBloomFilterWithHasher(expectedElements int, falsePositiveRate float64, hasher hash.Hasher) (*BloomFilter, error) {
 	if expectedElements <= 0 {
-		return nil, errors.New("expected elements must be positive")
+		return nil, errors.New(errors.ErrInvalidArgument, "expected elements must be positive")
 	}
 	if falsePositiveRate <= 0 || falsePositiveRate >= 1 {
-		return nil, errors.New("false positive rate must be between 0 and 1")
+		return nil, errors.New(errors.ErrInvalidArgument, "false positive rate must be between 0 and 1")
 	}
 
 	size := optimalSize(expectedElements, falsePositiveRate)
@@ -206,7 +205,7 @@ func (bf *BloomFilter) MarshalBinary() ([]byte, error) {
 //	}
 func (bf *BloomFilter) UnmarshalBinary(data []byte) error {
 	if len(data) < 16 {
-		return errors.New("invalid data length")
+		return errors.New(errors.ErrInvalidArgument, "invalid data length")
 	}
 	bf.size = binary.LittleEndian.Uint64(data[0:8])
 	bf.hashCount = binary.LittleEndian.Uint64(data[8:16])
@@ -261,7 +260,7 @@ func (bf *BloomFilter) Capacity() int {
 //	}
 func (bf *BloomFilter) Merge(other *BloomFilter) error {
 	if bf.size != other.size || bf.hashCount != other.hashCount {
-		return errors.New("bloom filters must have the same size and hash count to merge")
+		return errors.New(errors.ErrInvalidArgument, "bloom filters must have the same size and hash count to merge")
 	}
 	for i := range bf.bitset {
 		bf.bitset[i] |= other.bitset[i]

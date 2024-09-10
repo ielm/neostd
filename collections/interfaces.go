@@ -21,14 +21,22 @@ type Pair[K any, V any] struct {
 	Value V
 }
 
+type Countable interface {
+	Size() int
+	IsEmpty() bool
+}
+
+type Clearable interface {
+	Clear()
+}
+
 type Collection[T any] interface {
 	Iterable[T]
+	Countable
+	Clearable
 	Add(item T) bool
 	Remove(item T) bool
 	Contains(item T) bool
-	Size() int
-	Clear()
-	IsEmpty() bool
 	SetComparator(comp comp.Comparator[T])
 }
 
@@ -77,11 +85,10 @@ type Map[K comparable, V any] interface {
 
 // ProbabilisticSet represents a probabilistic set data structure
 type ProbabilisticSet[T any] interface {
+	Countable
+	Clearable
 	Add(item T) bool
 	Contains(item T) bool
-	Clear()
-	Size() int
-	IsEmpty() bool
 }
 
 // SortedSet represents an ordered set with additional operations

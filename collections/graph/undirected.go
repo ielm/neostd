@@ -1,9 +1,8 @@
 package graph
 
 import (
-	"errors"
-
 	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/errors"
 )
 
 // UGraph represents an undirected graph
@@ -25,12 +24,12 @@ func (g *UGraph[V, E]) AddEdge(source, destination V, weight E) error {
 
 	sourceEdges, exists := g.vertices.Get(source)
 	if !exists {
-		return errors.New("source vertex not found")
+		return errors.New(errors.ErrNotFound, "source vertex not found")
 	}
 
 	destEdges, exists := g.vertices.Get(destination)
 	if !exists {
-		return errors.New("destination vertex not found")
+		return errors.New(errors.ErrNotFound, "destination vertex not found")
 	}
 
 	sourceEdges.Put(destination, weight)
@@ -46,12 +45,12 @@ func (g *UGraph[V, E]) RemoveEdge(source, destination V) error {
 
 	sourceEdges, exists := g.vertices.Get(source)
 	if !exists {
-		return errors.New("source vertex not found")
+		return errors.New(errors.ErrNotFound, "source vertex not found")
 	}
 
 	destEdges, exists := g.vertices.Get(destination)
 	if !exists {
-		return errors.New("destination vertex not found")
+		return errors.New(errors.ErrNotFound, "destination vertex not found")
 	}
 
 	if _, exists := sourceEdges.Remove(destination); exists {
@@ -59,7 +58,7 @@ func (g *UGraph[V, E]) RemoveEdge(source, destination V) error {
 		g.edgeCount--
 		return nil
 	}
-	return errors.New("edge not found")
+	return errors.New(errors.ErrNotFound, "edge not found")
 }
 
 // GetEdge returns the edge between two vertices

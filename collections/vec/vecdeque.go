@@ -1,10 +1,9 @@
 package vec
 
 import (
-	"errors"
-
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/errors"
 )
 
 // VecDeque is a double-ended queue implemented with a growable ring buffer.
@@ -111,7 +110,7 @@ func (vd *VecDeque[T]) Back() (T, bool) {
 func (vd *VecDeque[T]) Get(index int) (T, error) {
 	if index < 0 || index >= vd.len {
 		var zero T
-		return zero, errors.New("index out of bounds")
+		return zero, errors.New(errors.ErrOutOfBounds, "index out of bounds")
 	}
 	return vd.buf[(vd.head+index)%vd.cap], nil
 }
@@ -120,7 +119,7 @@ func (vd *VecDeque[T]) Get(index int) (T, error) {
 // If the index is out of bounds, it returns an error.
 func (vd *VecDeque[T]) Set(index int, item T) error {
 	if index < 0 || index >= vd.len {
-		return errors.New("index out of bounds")
+		return errors.New(errors.ErrOutOfBounds, "index out of bounds")
 	}
 	vd.buf[(vd.head+index)%vd.cap] = item
 	return nil
@@ -221,7 +220,7 @@ func (vd *VecDeque[T]) Remove(item T) bool {
 // If the index is out of bounds, it returns an error.
 func (vd *VecDeque[T]) RemoveAt(index int) error {
 	if index < 0 || index >= vd.len {
-		return errors.New("index out of bounds")
+		return errors.New(errors.ErrOutOfBounds, "index out of bounds")
 	}
 	if index == 0 {
 		vd.PopFront()
