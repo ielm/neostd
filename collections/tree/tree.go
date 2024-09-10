@@ -4,6 +4,7 @@ import (
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/hash"
+	"github.com/ielm/neostd/res"
 )
 
 // Tree is the interface that all tree implementations should follow
@@ -102,16 +103,16 @@ func (it *treeIterator[T]) HasNext() bool {
 	return len(it.stack) > 0
 }
 
-func (it *treeIterator[T]) Next() T {
+func (it *treeIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
 	node := it.stack[len(it.stack)-1]
 	it.stack = it.stack[:len(it.stack)-1]
 	for i := len(node.Children) - 1; i >= 0; i-- {
 		it.stack = append(it.stack, node.Children[i])
 	}
-	return node.Value
+	return res.Some(node.Value)
 }
 
 // Ensure baseTree implements the Collection interface

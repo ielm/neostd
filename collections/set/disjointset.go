@@ -5,6 +5,7 @@ import (
 
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/res"
 )
 
 // DisjointSet represents a disjoint-set data structure.
@@ -293,9 +294,9 @@ func (it *disjointSetIterator[T]) HasNext() bool {
 	return it.index < len(it.items)
 }
 
-func (it *disjointSetIterator[T]) Next() T {
+func (it *disjointSetIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
 	item := it.items[it.index]
 	if it.reverse {
@@ -303,7 +304,7 @@ func (it *disjointSetIterator[T]) Next() T {
 	} else {
 		it.index++
 	}
-	return item
+	return res.Some(item)
 }
 
 // Ensure DisjointSet implements the Set interface

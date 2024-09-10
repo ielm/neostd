@@ -9,6 +9,7 @@ import (
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/hash"
+	"github.com/ielm/neostd/res"
 )
 
 // Constants for SkipList configuration
@@ -300,13 +301,13 @@ func (it *skipListIterator[T]) HasNext() bool {
 	return it.current != it.tail
 }
 
-func (it *skipListIterator[T]) Next() T {
+func (it *skipListIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("SkipListIterator: No more elements")
+		return res.None[T]()
 	}
 	value := it.current.value
 	it.current = it.current.forward[0]
-	return value
+	return res.Some(value)
 }
 
 type skipListReverseIterator[T any] struct {
@@ -318,13 +319,13 @@ func (it *skipListReverseIterator[T]) HasNext() bool {
 	return it.current != it.head
 }
 
-func (it *skipListReverseIterator[T]) Next() T {
+func (it *skipListReverseIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("SkipListReverseIterator: No more elements")
+		return res.None[T]()
 	}
 	value := it.current.value
 	it.current = it.current.backward
-	return value
+	return res.Some(value)
 }
 
 // randomLevel generates a random level for a new node.

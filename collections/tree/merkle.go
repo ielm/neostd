@@ -11,6 +11,7 @@ import (
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/errors"
 	"github.com/ielm/neostd/hash"
+	"github.com/ielm/neostd/res"
 )
 
 // MerkleTree represents a Merkle Tree data structure implementing the Set interface.
@@ -114,17 +115,17 @@ func (mt *MerkleTree) buildTree(nodes []*Node[[]byte]) *Node[[]byte] {
 }
 
 // GetRoot returns the root hash of the Merkle Tree.
-func (mt *MerkleTree) GetRoot() []byte {
+func (mt *MerkleTree) GetRoot() res.Option[[]byte] {
 	if mt.root == nil {
-		return nil
+		return res.None[[]byte]()
 	}
-	return mt.root.Value
+	return res.Some(mt.root.Value)
 }
 
 // GetProof generates a Merkle proof for the data at the given index.
-func (mt *MerkleTree) GetProof(index int) ([][]byte, error) {
+func (mt *MerkleTree) GetProof(index int) res.Result[[][]byte] {
 	if index < 0 || index >= len(mt.leaves) {
-		return nil, errors.New(errors.ErrOutOfBounds, "index out of range")
+		return res.Err[[][]byte](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
 	}
 
 	proof := make([][]byte, 0, bits.Len(uint(len(mt.leaves)-1)))
@@ -143,7 +144,7 @@ func (mt *MerkleTree) GetProof(index int) ([][]byte, error) {
 		currentIndex /= 2
 	}
 
-	return proof, nil
+	return res.Ok(proof)
 }
 
 // VerifyProof verifies a Merkle proof for the given data and root hash.
@@ -158,9 +159,9 @@ func (mt *MerkleTree) VerifyProof(data []byte, proof [][]byte, rootHash []byte) 
 }
 
 // Update updates the value at the given index and recalculates the affected hashes.
-func (mt *MerkleTree) Update(index int, newData []byte) error {
+func (mt *MerkleTree) Update(index int, newData []byte) res.Result[struct{}] {
 	if index < 0 || index >= len(mt.leaves) {
-		return errors.New(errors.ErrOutOfBounds, "index out of range")
+		return res.Err[struct{}](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
 	}
 
 	newHash := mt.hashData(newData)
@@ -186,13 +187,13 @@ func (mt *MerkleTree) Update(index int, newData []byte) error {
 		level++
 	}
 
-	return nil
+	return res.Ok(struct{}{})
 }
 
 // Diff returns the indices of leaves that differ between this tree and another.
-func (mt *MerkleTree) Diff(other *MerkleTree) ([]int, error) {
+func (mt *MerkleTree) Diff(other *MerkleTree) res.Result[[]int] {
 	if len(mt.leaves) != len(other.leaves) {
-		return nil, errors.New(errors.ErrInvalidArgument, "trees have different sizes")
+		return res.Err[[]int](errors.New(errors.ErrInvalidArgument, "trees have different sizes"))
 	}
 
 	diffIndices := []int{}
@@ -220,7 +221,7 @@ func (mt *MerkleTree) Diff(other *MerkleTree) ([]int, error) {
 		}
 	}
 
-	return diffIndices, nil
+	return res.Ok(diffIndices)
 }
 
 // hashData now uses the SipHasher
@@ -336,13 +337,13 @@ func (it *merkleReverseIterator) HasNext() bool {
 	return it.currentIndex >= 0
 }
 
-func (it *merkleReverseIterator) Next() []byte {
+func (it *merkleReverseIterator) Next() res.Option[[]byte] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[[]byte]()
 	}
 	value := it.tree.leaves[it.currentIndex].Value
 	it.currentIndex--
-	return value
+	return res.Some(value)
 }
 
 // Ensure MerkleTree implements the Set interface
@@ -369,4 +370,34 @@ func DeserializeMerkleTree(data []byte) (*MerkleTree, error) {
 		return nil, err
 	}
 	return &mt, nil
+}
+
+// Get returns the element at the given index.
+func (mt *MerkleTree) Get(index int) res.Result[[]byte] {
+	if index < 0 || index >= len(mt.leaves) {
+		return res.Err[[]byte](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
+	}
+	return res.Ok(mt.leaves[index].Value)
+}
+
+// Set sets the element at the given index.
+func (mt *MerkleTree) Set(index int, item []byte) res.Result[[]byte] {
+	if index < 0 || index >= len(mt.leaves) {
+		return res.Err[[]byte](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
+	}
+	hash := mt.hashData(item)
+	mt.leaves[index].Value = hash
+	mt.rebalance()
+	return res.Ok(hash)
+}
+
+// IndexOf returns the index of the first occurrence of the given item.
+func (mt *MerkleTree) IndexOf(item []byte) res.Option[int] {
+	hash := mt.hashData(item)
+	for i, leaf := range mt.leaves {
+		if comp.ByteSliceComparator(leaf.Value, hash) == 0 {
+			return res.Some(i)
+		}
+	}
+	return res.None[int]()
 }

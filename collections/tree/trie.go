@@ -33,6 +33,7 @@ import (
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/collections/maps"
 	"github.com/ielm/neostd/errors"
+	"github.com/ielm/neostd/res"
 )
 
 // Trie represents a generic trie data structure.
@@ -209,9 +210,9 @@ func (it *trieIterator[T]) HasNext() bool {
 }
 
 // Next returns the next element in the iterator.
-func (it *trieIterator[T]) Next() string {
+func (it *trieIterator[T]) Next() res.Option[string] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[string]()
 	}
 	word := it.words[it.index]
 	if it.reverse {
@@ -219,7 +220,7 @@ func (it *trieIterator[T]) Next() string {
 	} else {
 		it.index++
 	}
-	return word
+	return res.Some(word)
 }
 
 // Add implements the Set interface.

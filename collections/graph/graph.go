@@ -7,6 +7,7 @@ import (
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/collections/maps"
 	"github.com/ielm/neostd/errors"
+	"github.com/ielm/neostd/res"
 )
 
 // Edge represents an edge in the graph
@@ -219,9 +220,9 @@ func (it *graphIterator[V, E]) HasNext() bool {
 	return it.index < len(it.keys)
 }
 
-func (it *graphIterator[V, E]) Next() V {
+func (it *graphIterator[V, E]) Next() res.Option[V] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[V]()
 	}
 	vertex := it.keys[it.index]
 	if it.reverse {
@@ -229,7 +230,7 @@ func (it *graphIterator[V, E]) Next() V {
 	} else {
 		it.index++
 	}
-	return vertex
+	return res.Some(vertex)
 }
 
 // Ensure baseGraph implements the Collection interface

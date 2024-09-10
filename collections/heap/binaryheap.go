@@ -3,6 +3,7 @@ package heap
 import (
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/res"
 )
 
 // BinaryHeap is a priority queue implemented with a binary heap.
@@ -183,13 +184,13 @@ func (it *heapIterator[T]) HasNext() bool {
 	return it.index < len(it.heap.data)
 }
 
-func (it *heapIterator[T]) Next() T {
+func (it *heapIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
 	item := it.heap.data[it.index]
 	it.index++
-	return item
+	return res.Some(item)
 }
 
 // IntoSortedVec returns a sorted vector of the heap's elements.

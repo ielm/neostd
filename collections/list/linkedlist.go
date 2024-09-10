@@ -5,6 +5,7 @@ import (
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/errors"
+	"github.com/ielm/neostd/res"
 )
 
 // Node represents a single element in the linked list.
@@ -333,13 +334,13 @@ func (it *linkedListIterator[T]) HasNext() bool {
 	return it.current != nil
 }
 
-func (it *linkedListIterator[T]) Next() T {
+func (it *linkedListIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
 	value := it.current.value
 	it.current = it.current.next
-	return value
+	return res.Some(value)
 }
 
 // linkedListReverseIterator implements the Iterator interface for reverse iteration.
@@ -351,13 +352,13 @@ func (it *linkedListReverseIterator[T]) HasNext() bool {
 	return it.current != nil
 }
 
-func (it *linkedListReverseIterator[T]) Next() T {
+func (it *linkedListReverseIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
 	value := it.current.value
 	it.current = it.current.prev
-	return value
+	return res.Some(value)
 }
 
 // First returns a pointer to the first node in the list.
