@@ -4,6 +4,7 @@ import (
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/errors"
+	"github.com/ielm/neostd/res"
 )
 
 // Vec is a contiguous growable array type, similar to Rust's Vec.
@@ -62,22 +63,21 @@ func (v *Vec[T]) Pop() (T, bool) {
 
 // Get returns the element at the given index.
 // If the index is out of bounds, it returns the zero value of T and an error.
-func (v *Vec[T]) Get(index int) (T, error) {
+func (v *Vec[T]) Get(index int) res.Result[T] {
 	if index < 0 || index >= v.len {
-		var zero T
-		return zero, errors.New(errors.ErrOutOfBounds, "index out of bounds")
+		return res.Err[T](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
 	}
-	return v.data[index], nil
+	return res.Ok(v.data[index])
 }
 
 // Set sets the element at the given index.
 // If the index is out of bounds, it returns an error.
-func (v *Vec[T]) Set(index int, item T) error {
+func (v *Vec[T]) Set(index int, item T) res.Result[T] {
 	if index < 0 || index >= v.len {
-		return errors.New(errors.ErrOutOfBounds, "index out of bounds")
+		return res.Err[T](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
 	}
 	v.data[index] = item
-	return nil
+	return res.Ok(item)
 }
 
 // Len returns the number of elements in the Vec.
@@ -142,39 +142,39 @@ func (v *Vec[T]) Contains(item T) bool {
 
 // IndexOf returns the index of the first occurrence of the given item.
 // If the item is not found, it returns -1.
-func (v *Vec[T]) IndexOf(item T) int {
+func (v *Vec[T]) IndexOf(item T) res.Option[int] {
 	if v.comparator == nil {
 		panic("comparator not set for non-comparable type")
 	}
 	for i, elem := range v.data[:v.len] {
 		if v.comparator(elem, item) == 0 {
-			return i
+			return res.Some(i)
 		}
 	}
-	return -1
+	return res.None[int]()
 }
 
 // Remove removes the first occurrence of the given item from the Vec.
 // It returns true if the item was found and removed, false otherwise.
 func (v *Vec[T]) Remove(item T) bool {
 	index := v.IndexOf(item)
-	if index == -1 {
+	if index.IsNone() {
 		return false
 	}
-	v.RemoveAt(index)
+	v.RemoveAt(index.Unwrap())
 	return true
 }
 
 // RemoveAt removes the element at the given index.
 // If the index is out of bounds, it returns an error.
-func (v *Vec[T]) RemoveAt(index int) error {
+func (v *Vec[T]) RemoveAt(index int) res.Result[T] {
 	if index < 0 || index >= v.len {
-		return errors.New(errors.ErrOutOfBounds, "index out of bounds")
+		return res.Err[T](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
 	}
 	copy(v.data[index:], v.data[index+1:])
 	v.len--
 	v.data[v.len] = *new(T) // zero the last element
-	return nil
+	return res.Ok(v.data[index])
 }
 
 // Iterator returns an iterator for the Vec.
@@ -196,13 +196,13 @@ func (it *vecIterator[T]) HasNext() bool {
 	return it.index < it.vec.len
 }
 
-func (it *vecIterator[T]) Next() T {
+func (it *vecIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
 	item := it.vec.data[it.index]
 	it.index++
-	return item
+	return res.Some(item)
 }
 
 type vecReverseIterator[T any] struct {
@@ -214,13 +214,13 @@ func (it *vecReverseIterator[T]) HasNext() bool {
 	return it.index >= 0
 }
 
-func (it *vecReverseIterator[T]) Next() T {
+func (it *vecReverseIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
 	item := it.vec.data[it.index]
 	it.index--
-	return item
+	return res.Some(item)
 }
 
 // Add implements the Collection interface.

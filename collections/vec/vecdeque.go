@@ -4,6 +4,7 @@ import (
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/errors"
+	"github.com/ielm/neostd/res"
 )
 
 // VecDeque is a double-ended queue implemented with a growable ring buffer.
@@ -107,22 +108,21 @@ func (vd *VecDeque[T]) Back() (T, bool) {
 
 // Get returns the element at the given index.
 // If the index is out of bounds, it returns the zero value of T and an error.
-func (vd *VecDeque[T]) Get(index int) (T, error) {
+func (vd *VecDeque[T]) Get(index int) res.Result[T] {
 	if index < 0 || index >= vd.len {
-		var zero T
-		return zero, errors.New(errors.ErrOutOfBounds, "index out of bounds")
+		return res.Err[T](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
 	}
-	return vd.buf[(vd.head+index)%vd.cap], nil
+	return res.Ok(vd.buf[(vd.head+index)%vd.cap])
 }
 
 // Set sets the element at the given index.
 // If the index is out of bounds, it returns an error.
-func (vd *VecDeque[T]) Set(index int, item T) error {
+func (vd *VecDeque[T]) Set(index int, item T) res.Result[T] {
 	if index < 0 || index >= vd.len {
-		return errors.New(errors.ErrOutOfBounds, "index out of bounds")
+		return res.Err[T](errors.New(errors.ErrOutOfBounds, "index out of bounds"))
 	}
 	vd.buf[(vd.head+index)%vd.cap] = item
-	return nil
+	return res.Ok(item)
 }
 
 // Len returns the number of elements in the VecDeque.
@@ -193,26 +193,26 @@ func (vd *VecDeque[T]) Contains(item T) bool {
 
 // IndexOf returns the index of the first occurrence of the given item.
 // If the item is not found, it returns -1.
-func (vd *VecDeque[T]) IndexOf(item T) int {
+func (vd *VecDeque[T]) IndexOf(item T) res.Option[int] {
 	if vd.comparator == nil {
 		panic("comparator not set for non-comparable type")
 	}
 	for i := 0; i < vd.len; i++ {
 		if vd.comparator(vd.buf[(vd.head+i)%vd.cap], item) == 0 {
-			return i
+			return res.Some(i)
 		}
 	}
-	return -1
+	return res.None[int]()
 }
 
 // Remove removes the first occurrence of the given item from the VecDeque.
 // It returns true if the item was found and removed, false otherwise.
 func (vd *VecDeque[T]) Remove(item T) bool {
 	index := vd.IndexOf(item)
-	if index == -1 {
+	if index.IsNone() {
 		return false
 	}
-	vd.RemoveAt(index)
+	vd.RemoveAt(index.Unwrap())
 	return true
 }
 
@@ -267,13 +267,17 @@ func (it *vecDequeIterator[T]) HasNext() bool {
 	return it.index < it.vd.len
 }
 
-func (it *vecDequeIterator[T]) Next() T {
+func (it *vecDequeIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
-	item, _ := it.vd.Get(it.index)
+
+	item := it.vd.Get(it.index)
+	if item.IsErr() {
+		return res.None[T]()
+	}
 	it.index++
-	return item
+	return res.Some(item.Unwrap())
 }
 
 type vecDequeReverseIterator[T any] struct {
@@ -285,13 +289,16 @@ func (it *vecDequeReverseIterator[T]) HasNext() bool {
 	return it.index >= 0
 }
 
-func (it *vecDequeReverseIterator[T]) Next() T {
+func (it *vecDequeReverseIterator[T]) Next() res.Option[T] {
 	if !it.HasNext() {
-		panic("no more elements")
+		return res.None[T]()
 	}
-	item, _ := it.vd.Get(it.index)
+	item := it.vd.Get(it.index)
+	if item.IsErr() {
+		return res.None[T]()
+	}
 	it.index--
-	return item
+	return res.Some(item.Unwrap())
 }
 
 // Add implements the Collection interface.
