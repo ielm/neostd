@@ -97,3 +97,35 @@ type SortedSet[T any] interface {
 	Set[T]
 	Get(item T) (T, bool)
 }
+
+// Sort defines the interface for sorting algorithms that operate on slices.
+type Sort[T any] func([]T) res.Result[[]T]
+
+// SortIterator defines the interface for sorting algorithms that operate on iterators.
+type SortIterator[T any] func(Iterator[T]) Iterator[T]
+
+// Sortable is an interface that defines methods for sorting a collection.
+type Sortable[T any] interface {
+	// Sort sorts the collection in-place and returns the sorted collection.
+	Sort() res.Result[Sortable[T]]
+
+	// SortWith sorts the collection in-place using the provided comparison function.
+	SortWith(less func(a, b T) bool) res.Result[Sortable[T]]
+
+	// Sorted returns a new sorted collection without modifying the original.
+	Sorted() res.Result[Sortable[T]]
+
+	// SortedWith returns a new sorted collection using the provided comparison function,
+	// without modifying the original.
+	SortedWith(less func(a, b T) bool) res.Result[Sortable[T]]
+}
+
+// SortableIterator is an interface that defines methods for sorting iterators.
+type SortableIterator[T any] interface {
+	// Sort sorts the iterator and returns a new sorted iterator.
+	Sort() res.Result[Iterator[T]]
+
+	// SortWith sorts the iterator using the provided comparison function
+	// and returns a new sorted iterator.
+	SortWith(less func(a, b T) bool) res.Result[Iterator[T]]
+}
