@@ -35,50 +35,36 @@ import (
 	"github.com/ielm/neostd/errors"
 )
 
-// Trie represents a trie data structure.
-// This implementation uses a HashMap for storing children, allowing for efficient
-// operations on Unicode strings. It implements the Set interface for strings.
-type Trie struct {
+// Trie represents a generic trie data structure.
+type Trie[T any] struct {
 	*baseTree[string]
-	root *trieNode
+	root *trieNode[T]
 }
 
 // trieNode represents a single node in the Trie.
-type trieNode struct {
-	children *maps.HashMap[rune, *trieNode] // Map of child nodes
-	isEnd    bool                           // Flag indicating if this node represents the end of a word
+type trieNode[T any] struct {
+	children *maps.HashMap[rune, *trieNode[T]]
+	value    *T
+	isEnd    bool
 }
 
 // NewTrie creates a new Trie.
-//
-// This function initializes an empty Trie with a root node.
-//
-// Example:
-//
-//	trie := NewTrie()
-func NewTrie() *Trie {
-	return &Trie{
+func NewTrie[T any]() *Trie[T] {
+	return &Trie[T]{
 		baseTree: newBaseTree(comp.GenericComparator[string](), nil),
-		root:     newTrieNode(),
+		root:     newTrieNode[T](),
 	}
 }
 
 // newTrieNode creates a new trieNode.
-func newTrieNode() *trieNode {
-	return &trieNode{
-		children: maps.NewHashMap[rune, *trieNode](comp.GenericComparator[rune]()),
+func newTrieNode[T any]() *trieNode[T] {
+	return &trieNode[T]{
+		children: maps.NewHashMap[rune, *trieNode[T]](comp.GenericComparator[rune]()),
 	}
 }
 
-// Insert adds a word to the trie.
-//
-// This method inserts a word into the trie, creating new nodes as necessary.
-// If the word already exists, the method does nothing.
-//
-// Example:
-//
-//	trie.Insert("hello")
-func (t *Trie) Insert(word string) error {
+// Insert adds a word to the trie with an associated value.
+func (t *Trie[T]) Insert(word string, value T) error {
 	if word == "" {
 		return errors.New(errors.ErrInvalidArgument, "cannot insert empty string")
 	}
@@ -88,45 +74,35 @@ func (t *Trie) Insert(word string) error {
 		if child, exists := node.children.Get(ch); exists {
 			node = child
 		} else {
-			newNode := newTrieNode()
+			newNode := newTrieNode[T]()
 			node.children.Put(ch, newNode)
 			node = newNode
 		}
 	}
 	if !node.isEnd {
 		node.isEnd = true
+		node.value = &value
 		t.size++
 	}
 	return nil
 }
 
-// Search checks if a word exists in the trie.
-//
-// This method traverses the trie to check if the given word is present.
-// It returns true if the word is found, false otherwise.
-//
-// Example:
-//
-//	found := trie.Search("hello")
-func (t *Trie) Search(word string) bool {
+// Search checks if a word exists in the trie and returns its value.
+func (t *Trie[T]) Search(word string) (*T, bool) {
 	node := t.findNode(word)
-	return node != nil && node.isEnd
+	if node != nil && node.isEnd {
+		return node.value, true
+	}
+	return nil, false
 }
 
 // StartsWith checks if any word in the trie starts with the given prefix.
-//
-// This method traverses the trie to check if there's any word with the given prefix.
-// It returns true if a prefix is found, false otherwise.
-//
-// Example:
-//
-//	hasPrefix := trie.StartsWith("he")
-func (t *Trie) StartsWith(prefix string) bool {
+func (t *Trie[T]) StartsWith(prefix string) bool {
 	return t.findNode(prefix) != nil
 }
 
 // findNode is a helper method that finds the node corresponding to a given string.
-func (t *Trie) findNode(s string) *trieNode {
+func (t *Trie[T]) findNode(s string) *trieNode[T] {
 	node := t.root
 	for _, ch := range s {
 		if child, exists := node.children.Get(ch); exists {
@@ -139,25 +115,19 @@ func (t *Trie) findNode(s string) *trieNode {
 }
 
 // Delete removes a word from the trie.
-//
-// This method removes the given word from the trie if it exists.
-// It uses a depth-first search approach to remove nodes that are no longer needed.
-//
-// Example:
-//
-//	err := trie.Delete("hello")
-func (t *Trie) Delete(word string) error {
+func (t *Trie[T]) Delete(word string) error {
 	if word == "" {
 		return errors.New(errors.ErrInvalidArgument, "cannot delete empty string")
 	}
 
-	var dfs func(node *trieNode, s string, depth int) bool
-	dfs = func(node *trieNode, s string, depth int) bool {
+	var dfs func(node *trieNode[T], s string, depth int) bool
+	dfs = func(node *trieNode[T], s string, depth int) bool {
 		if depth == len(s) {
 			if !node.isEnd {
 				return false
 			}
 			node.isEnd = false
+			node.value = nil
 			t.size--
 			return node.children.IsEmpty()
 		}
@@ -181,32 +151,20 @@ func (t *Trie) Delete(word string) error {
 }
 
 // Clear removes all words from the trie.
-//
-// This method resets the trie to its initial state.
-//
-// Example:
-//
-//	trie.Clear()
-func (t *Trie) Clear() {
-	t.root = newTrieNode()
+func (t *Trie[T]) Clear() {
+	t.root = newTrieNode[T]()
 	t.size = 0
 }
 
 // Words returns all words in the trie.
-//
-// This method performs a depth-first search to collect all words in the trie.
-//
-// Example:
-//
-//	words := trie.Words()
-func (t *Trie) Words() []string {
+func (t *Trie[T]) Words() []string {
 	var result []string
-	var dfs func(node *trieNode, current []rune)
-	dfs = func(node *trieNode, current []rune) {
+	var dfs func(node *trieNode[T], current []rune)
+	dfs = func(node *trieNode[T], current []rune) {
 		if node.isEnd {
 			result = append(result, string(current))
 		}
-		node.children.ForEach(func(ch rune, child *trieNode) {
+		node.children.ForEach(func(ch rune, child *trieNode[T]) {
 			dfs(child, append(current, ch))
 		})
 	}
@@ -215,17 +173,8 @@ func (t *Trie) Words() []string {
 }
 
 // Iterator returns an iterator over the words in the trie.
-//
-// The iterator allows forward traversal of all words in the trie.
-//
-// Example:
-//
-//	it := trie.Iterator()
-//	for it.HasNext() {
-//		fmt.Println(it.Next())
-//	}
-func (t *Trie) Iterator() collections.Iterator[string] {
-	return &trieIterator{
+func (t *Trie[T]) Iterator() collections.Iterator[string] {
+	return &trieIterator[T]{
 		trie:  t,
 		words: t.Words(),
 		index: 0,
@@ -233,18 +182,9 @@ func (t *Trie) Iterator() collections.Iterator[string] {
 }
 
 // ReverseIterator returns a reverse iterator over the words in the trie.
-//
-// The reverse iterator allows backward traversal of all words in the trie.
-//
-// Example:
-//
-//	it := trie.ReverseIterator()
-//	for it.HasNext() {
-//		fmt.Println(it.Next())
-//	}
-func (t *Trie) ReverseIterator() collections.Iterator[string] {
+func (t *Trie[T]) ReverseIterator() collections.Iterator[string] {
 	words := t.Words()
-	return &trieIterator{
+	return &trieIterator[T]{
 		trie:    t,
 		words:   words,
 		index:   len(words) - 1,
@@ -253,15 +193,15 @@ func (t *Trie) ReverseIterator() collections.Iterator[string] {
 }
 
 // trieIterator is an iterator for the Trie.
-type trieIterator struct {
-	trie    *Trie
+type trieIterator[T any] struct {
+	trie    *Trie[T]
 	words   []string
 	index   int
 	reverse bool
 }
 
 // HasNext checks if there are more elements in the iterator.
-func (it *trieIterator) HasNext() bool {
+func (it *trieIterator[T]) HasNext() bool {
 	if it.reverse {
 		return it.index >= 0
 	}
@@ -269,7 +209,7 @@ func (it *trieIterator) HasNext() bool {
 }
 
 // Next returns the next element in the iterator.
-func (it *trieIterator) Next() string {
+func (it *trieIterator[T]) Next() string {
 	if !it.HasNext() {
 		panic("no more elements")
 	}
@@ -283,31 +223,18 @@ func (it *trieIterator) Next() string {
 }
 
 // Add implements the Set interface.
-//
-// This method adds a word to the trie. It returns true if the word was added,
-// false if it already existed.
-//
-// Example:
-//
-//	added := trie.Add("hello")
-func (t *Trie) Add(word string) bool {
-	if t.Search(word) {
+func (t *Trie[T]) Add(word string) bool {
+	if _, found := t.Search(word); found {
 		return false // Word already exists
 	}
-	t.Insert(word)
+	var zero T
+	t.Insert(word, zero)
 	return true
 }
 
 // Remove implements the Set interface.
-//
-// This method removes a word from the trie. It returns true if the word was removed,
-// false if it didn't exist.
-//
-// Example:
-//
-//	removed := trie.Remove("hello")
-func (t *Trie) Remove(word string) bool {
-	if !t.Search(word) {
+func (t *Trie[T]) Remove(word string) bool {
+	if _, found := t.Search(word); !found {
 		return false // Word doesn't exist
 	}
 	t.Delete(word)
@@ -315,20 +242,15 @@ func (t *Trie) Remove(word string) bool {
 }
 
 // Contains implements the Set interface.
-//
-// This method checks if a word exists in the trie.
-//
-// Example:
-//
-//	exists := trie.Contains("hello")
-func (t *Trie) Contains(word string) bool {
-	return t.Search(word)
+func (t *Trie[T]) Contains(word string) bool {
+	_, found := t.Search(word)
+	return found
 }
 
 // SetComparator is a no-op for Trie as it uses string comparison by default.
-func (t *Trie) SetComparator(comp comp.Comparator[string]) {
+func (t *Trie[T]) SetComparator(comp comp.Comparator[string]) {
 	// No-op
 }
 
 // Ensure Trie implements the Set interface
-var _ collections.Set[string] = (*Trie)(nil)
+var _ collections.Set[string] = (*Trie[any])(nil)
