@@ -64,10 +64,9 @@ func (h *BinaryHeap[T]) Push(item T) {
 //	if exists {
 //		fmt.Printf("Top item: %v\n", topItem)
 //	}
-func (h *BinaryHeap[T]) Pop() (T, bool) {
+func (h *BinaryHeap[T]) Pop() res.Option[T] {
 	if h.IsEmpty() {
-		var zero T
-		return zero, false
+		return res.None[T]()
 	}
 
 	max := h.data[0]
@@ -77,7 +76,7 @@ func (h *BinaryHeap[T]) Pop() (T, bool) {
 	if !h.IsEmpty() {
 		h.siftDown(0)
 	}
-	return max, true
+	return res.Some(max)
 }
 
 // Peek returns the top element without removing it.
@@ -91,12 +90,11 @@ func (h *BinaryHeap[T]) Pop() (T, bool) {
 //	if exists {
 //		fmt.Printf("Top item without removing: %v\n", topItem)
 //	}
-func (h *BinaryHeap[T]) Peek() (T, bool) {
+func (h *BinaryHeap[T]) Peek() res.Option[T] {
 	if h.IsEmpty() {
-		var zero T
-		return zero, false
+		return res.None[T]()
 	}
-	return h.data[0], true
+	return res.Some(h.data[0])
 }
 
 // IsEmpty returns true if the heap contains no elements.
@@ -202,9 +200,18 @@ func (it *heapIterator[T]) Next() res.Option[T] {
 //	sortedSlice := heap.IntoSortedVec()
 //	fmt.Printf("Sorted elements: %v\n", sortedSlice)
 func (h *BinaryHeap[T]) IntoSortedVec() []T {
-	result := make([]T, len(h.data))
-	for i := len(h.data) - 1; i >= 0; i-- {
-		result[i], _ = h.Pop()
+	result := make([]T, 0, len(h.data))
+	for len(h.data) > 0 {
+		if popped := h.Pop(); popped.IsSome() {
+			result = append(result, popped.Unwrap())
+		} else {
+			// This shouldn't happen, but we handle it gracefully
+			break
+		}
+	}
+	// Reverse the slice since we popped in reverse order
+	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+		result[i], result[j] = result[j], result[i]
 	}
 	return result
 }
