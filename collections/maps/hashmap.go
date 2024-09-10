@@ -2,6 +2,7 @@ package maps
 
 import (
 	"math/bits"
+	"sync"
 	"unsafe"
 
 	"github.com/ielm/neostd/collections"
@@ -20,6 +21,7 @@ const (
 
 // HashMap struct definition
 type HashMap[K any, V any] struct {
+	mu         sync.RWMutex // Add a read-write mutex for thread safety
 	ctrl       []byte
 	entries    []entry[K, V]
 	size       int
@@ -80,6 +82,9 @@ func NewHashMapWithHasher[K any, V any](comparator comp.Comparator[K], hasher ha
 //
 //	oldValue, existed := hm.Put("key", 42)
 func (h *HashMap[K, V]) Put(key K, value V) (V, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	if h.shouldResize() {
 		h.resize(h.capacity * 2)
 	}
@@ -104,6 +109,9 @@ func (h *HashMap[K, V]) Put(key K, value V) (V, bool) {
 //
 //	value, found := hm.Get("key")
 func (h *HashMap[K, V]) Get(key K) (V, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	hash := h.hashKey(key)
 	index := hash & uint64(h.capacity-1)
 	hashByte := h.hashToByte(hash)
@@ -139,6 +147,9 @@ func (h *HashMap[K, V]) Get(key K) (V, bool) {
 //
 //	removedValue, existed := hm.Remove("key")
 func (h *HashMap[K, V]) Remove(key K) (V, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	hash := h.hashKey(key)
 	index := hash & uint64(h.capacity-1)
 	hashByte := h.hashToByte(hash)
@@ -304,7 +315,7 @@ func (h *HashMap[K, V]) removeEntry(index uint64) (V, bool) {
 	return removedValue, true
 }
 
-// Additional methods
+// Interface Compliance methods
 
 // Clear removes all key-value pairs from the HashMap
 //
@@ -312,6 +323,9 @@ func (h *HashMap[K, V]) removeEntry(index uint64) (V, bool) {
 //
 //	hm.Clear()
 func (h *HashMap[K, V]) Clear() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	h.size = 0
 	h.capacity = minCapacity
 	h.initializeCtrl()
@@ -323,6 +337,8 @@ func (h *HashMap[K, V]) Clear() {
 //
 //	count := hm.Size()
 func (h *HashMap[K, V]) Size() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.size
 }
 
@@ -334,6 +350,8 @@ func (h *HashMap[K, V]) Size() int {
 //		fmt.Println("HashMap is empty")
 //	}
 func (h *HashMap[K, V]) IsEmpty() bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.size == 0
 }
 
@@ -343,6 +361,9 @@ func (h *HashMap[K, V]) IsEmpty() bool {
 //
 //	keys := hm.Keys()
 func (h *HashMap[K, V]) Keys() []K {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	keys := make([]K, 0, h.size)
 	for i, ctrl := range h.ctrl {
 		if ctrl&0x80 != 0 {
@@ -358,6 +379,9 @@ func (h *HashMap[K, V]) Keys() []K {
 //
 //	values := hm.Values()
 func (h *HashMap[K, V]) Values() []V {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	values := make([]V, 0, h.size)
 	for i, ctrl := range h.ctrl {
 		if ctrl&0x80 != 0 {
@@ -375,6 +399,9 @@ func (h *HashMap[K, V]) Values() []V {
 //		fmt.Printf("Key: %s, Value: %d\n", key, value)
 //	})
 func (h *HashMap[K, V]) ForEach(f func(K, V)) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	for i, ctrl := range h.ctrl {
 		if ctrl&0x80 != 0 {
 			f(h.entries[i].key, h.entries[i].value)
@@ -384,6 +411,9 @@ func (h *HashMap[K, V]) ForEach(f func(K, V)) {
 
 // ContainsKey checks if the given key exists in the HashMap
 func (h *HashMap[K, V]) ContainsKey(key K) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	_, found := h.Get(key)
 	return found
 }
@@ -398,6 +428,8 @@ func (h *HashMap[K, V]) ContainsKey(key K) bool {
 //		return a.CompareTo(b)
 //	})
 func (h *HashMap[K, V]) SetComparator(comp comp.Comparator[K]) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.comparator = comp
 }
 
