@@ -1,4 +1,4 @@
-package result
+package res
 
 // Option represents an optional value.
 type Option[T any] struct {
