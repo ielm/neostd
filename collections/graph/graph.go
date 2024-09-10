@@ -32,6 +32,9 @@ type Graph[V comparable, E any] interface {
 }
 
 // baseGraph is the common implementation for both directed and undirected graphs
+// We use an adjacency list to store the graph, where each vertex has a map of
+// it's weighted edges. Our HashMap has O(1) amortized lookup time complexity,
+// allowing for O(1) edge add, remove, and lookup.
 type baseGraph[V comparable, E any] struct {
 	vertices   *maps.HashMap[V, *maps.HashMap[V, E]]
 	edgeCount  int
