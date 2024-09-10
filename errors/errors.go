@@ -14,6 +14,7 @@ const (
 	ErrOutOfBounds
 	ErrNotFound
 	ErrNotImplemented
+	ErrUnwrapOnErr
 	// ...
 )
 
