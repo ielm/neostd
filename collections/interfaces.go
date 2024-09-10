@@ -2,6 +2,7 @@ package collections
 
 import (
 	"github.com/ielm/neostd/collections/comp"
+	"github.com/ielm/neostd/res"
 )
 
 // Iterable represents a collection that can be iterated over
@@ -13,7 +14,7 @@ type Iterable[T any] interface {
 // Iterator represents an iterator over a collection
 type Iterator[T any] interface {
 	HasNext() bool
-	Next() T
+	Next() res.Option[T]
 }
 
 type Pair[K any, V any] struct {
@@ -43,9 +44,9 @@ type Collection[T any] interface {
 // List represents an ordered collection
 type List[T any] interface {
 	Collection[T]
-	Get(index int) (T, error)
-	Set(index int, item T) error
-	IndexOf(item T) int
+	Get(index int) res.Result[T]
+	Set(index int, item T) res.Result[T]
+	IndexOf(item T) res.Option[int]
 }
 
 // Vector represents a resizable array
