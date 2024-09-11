@@ -39,6 +39,13 @@ func ChainComparators[T any](comparators ...Comparator[T]) Comparator[T] {
 	}
 }
 
+// NoOpComparator returns a no-op comparator
+func NoOpComparator[T any]() Comparator[T] {
+	return func(a, b T) int {
+		return 0
+	}
+}
+
 // Min returns the minimum of two values
 func Min[T constraints.Ordered](a, b T) T {
 	if a < b {
