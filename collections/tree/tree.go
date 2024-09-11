@@ -80,6 +80,16 @@ func (t *baseTree[T]) SetHasher(h hash.Hasher) {
 	t.hasher = h
 }
 
+// Comparator returns the comparator for the tree
+func (t *baseTree[T]) Comparator() comp.Comparator[T] {
+	return t.comparator
+}
+
+// Hasher returns the hasher for the tree
+func (t *baseTree[T]) Hasher() hash.Hasher {
+	return t.hasher
+}
+
 // Iterator returns an iterator over the tree's nodes
 func (t *baseTree[T]) Iterator() collections.Iterator[T] {
 	return &treeIterator[T]{

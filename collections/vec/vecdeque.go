@@ -191,6 +191,11 @@ func (vd *VecDeque[T]) Contains(item T) bool {
 	return false
 }
 
+// Comparator returns the comparator for the VecDeque.
+func (vd *VecDeque[T]) Comparator() comp.Comparator[T] {
+	return vd.comparator
+}
+
 // IndexOf returns the index of the first occurrence of the given item.
 // If the item is not found, it returns -1.
 func (vd *VecDeque[T]) IndexOf(item T) res.Option[int] {

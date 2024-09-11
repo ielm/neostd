@@ -399,5 +399,10 @@ func (sl *SkipList[T]) SetComparator(comp comp.Comparator[T]) {
 	sl.comp = comp
 }
 
+// Comparator returns the comparator for the SkipList
+func (sl *SkipList[T]) Comparator() comp.Comparator[T] {
+	return sl.comp
+}
+
 // Ensure SkipList implements the SortedSet interface
 var _ collections.SortedSet[any] = (*SkipList[any])(nil)

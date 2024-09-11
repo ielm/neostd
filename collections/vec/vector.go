@@ -127,6 +127,11 @@ func (v *Vec[T]) SetComparator(comparator comp.Comparator[T]) {
 	v.comparator = comparator
 }
 
+// Comparator returns the comparator for the Vec.
+func (v *Vec[T]) Comparator() comp.Comparator[T] {
+	return v.comparator
+}
+
 // Contains checks if the Vec contains the given item.
 func (v *Vec[T]) Contains(item T) bool {
 	if v.comparator == nil {

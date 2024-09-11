@@ -79,6 +79,16 @@ func (h *BinaryHeap[T]) Pop() res.Option[T] {
 	return res.Some(max)
 }
 
+// Contains checks if the heap contains the given item.
+func (h *BinaryHeap[T]) Contains(item T) bool {
+	for _, v := range h.data {
+		if h.comparator(v, item) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // Peek returns the top element without removing it.
 // For a max-heap, this is the maximum element.
 // For a min-heap (created with NewMinBinaryHeap), this is the minimum element.

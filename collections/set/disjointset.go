@@ -249,6 +249,11 @@ func (ds *DisjointSet[T]) SetComparator(comp.Comparator[T]) {
 	// No-op
 }
 
+// Comparator returns a no-op comparator for DisjointSet as it doesn't use comparators.
+func (ds *DisjointSet[T]) Comparator() comp.Comparator[T] {
+	return comp.NoOpComparator[T]()
+}
+
 // Iterator returns an iterator over all elements in the DisjointSet.
 //
 // Example:
