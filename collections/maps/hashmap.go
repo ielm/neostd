@@ -8,6 +8,7 @@ import (
 	"github.com/ielm/neostd/collections"
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/hash"
+	"github.com/ielm/neostd/res"
 )
 
 // Constants
@@ -46,10 +47,10 @@ type entry[K any, V any] struct {
 // Example:
 //
 //	hm := maps.NewHashMap[string, int](collections.GenericComparator[string]())
-func NewHashMap[K any, V any](comparator comp.Comparator[K]) *HashMap[K, V] {
+func NewHashMap[K any, V any](comparator comp.Comparator[K]) res.Result[*HashMap[K, V]] {
 	hasher, err := hash.NewSipHasher()
 	if err != nil {
-		panic(err) // In production, consider handling this error more gracefully
+		return res.Err[*HashMap[K, V]](err)
 	}
 	return NewHashMapWithHasher[K, V](comparator, hasher)
 }
@@ -61,7 +62,7 @@ func NewHashMap[K any, V any](comparator comp.Comparator[K]) *HashMap[K, V] {
 //
 //	customHasher := &MyCustomHasher{}
 //	hm := maps.NewHashMapWithHasher[string, int](collections.GenericComparator[string](), customHasher)
-func NewHashMapWithHasher[K any, V any](comparator comp.Comparator[K], hasher hash.Hasher) *HashMap[K, V] {
+func NewHashMapWithHasher[K any, V any](comparator comp.Comparator[K], hasher hash.Hasher) res.Result[*HashMap[K, V]] {
 	h := &HashMap[K, V]{
 		capacity:   minCapacity,
 		loadFactor: defaultLoadFactor,
@@ -69,7 +70,7 @@ func NewHashMapWithHasher[K any, V any](comparator comp.Comparator[K], hasher ha
 		hasher:     hasher,
 	}
 	h.initializeCtrl()
-	return h
+	return res.Ok(h)
 }
 
 // Core methods
@@ -104,6 +105,7 @@ func (h *HashMap[K, V]) Put(key K, value V) (V, bool) {
 
 // Get retrieves a value from the HashMap by its key.
 // It returns the value and a boolean indicating whether the key was found.
+// TODO: Use Option[V]
 //
 // Example:
 //
@@ -231,11 +233,14 @@ func (h *HashMap[K, V]) matchGroup(group uint64, hashByte byte) uint16 {
 	mask := uint16(0)
 
 	// Perform 16 comparisons in parallel
-	// Please no one ask me how this works, I just know it's crazy fast
 	for i := 0; i < 16; i += 8 {
+		// Load 8 bytes from the vector
 		chunk := *(*uint64)(unsafe.Pointer(&vec[i]))
+		// XOR the chunk with the hashByte
 		eq := chunk ^ (uint64(hashByte) * 0x0101010101010101)
+		// This is a bitmask that will be non-zero if the hashByte is found in the chunk
 		bitmask := ((eq - 0x0101010101010101) & ^eq & 0x8080808080808080) >> 7
+		// OR the bitmask with the mask
 		mask |= uint16(bitmask) << i
 	}
 
@@ -248,9 +253,13 @@ func (h *HashMap[K, V]) findEmptySlot(group uint64) int {
 
 	// Check 16 slots in parallel
 	for i := 0; i < 16; i += 8 {
+		// Load 8 bytes from the vector
 		chunk := *(*uint64)(unsafe.Pointer(&vec[i]))
+		// XOR the chunk with the hashByte
 		eq := chunk ^ (uint64(emptyByte) * 0x0101010101010101)
+		// Bitmask to check if any of the 8 bytes are empty
 		bitmask := ((eq - 0x0101010101010101) & ^eq & 0x8080808080808080) >> 7
+		// If the bitmask is not zero, we found an empty slot
 		if bitmask != 0 {
 			return i + bits.TrailingZeros64(bitmask)
 		}

@@ -60,7 +60,7 @@ func NewTrie[T any]() *Trie[T] {
 // newTrieNode creates a new trieNode.
 func newTrieNode[T any]() *trieNode[T] {
 	return &trieNode[T]{
-		children: maps.NewHashMap[rune, *trieNode[T]](comp.GenericComparator[rune]()),
+		children: maps.NewHashMap[rune, *trieNode[T]](comp.GenericComparator[rune]()).Unwrap(),
 	}
 }
 

@@ -45,7 +45,7 @@ type baseGraph[V comparable, E any] struct {
 // newBaseGraph creates a new base graph
 func newBaseGraph[V comparable, E any](comparator comp.Comparator[V]) *baseGraph[V, E] {
 	return &baseGraph[V, E]{
-		vertices:   maps.NewHashMap[V, *maps.HashMap[V, E]](comparator),
+		vertices:   maps.NewHashMap[V, *maps.HashMap[V, E]](comparator).Unwrap(),
 		comparator: comparator,
 	}
 }
@@ -58,7 +58,7 @@ func (g *baseGraph[V, E]) Add(vertex V) bool {
 	if _, exists := g.vertices.Get(vertex); exists {
 		return false
 	}
-	g.vertices.Put(vertex, maps.NewHashMap[V, E](g.comparator))
+	g.vertices.Put(vertex, maps.NewHashMap[V, E](g.comparator).Unwrap())
 	return true
 }
 
@@ -125,6 +125,11 @@ func (g *baseGraph[V, E]) SetComparator(comp comp.Comparator[V]) {
 	g.vertices.ForEach(func(_ V, edges *maps.HashMap[V, E]) {
 		edges.SetComparator(comp)
 	})
+}
+
+// Comparator returns the comparator for the graph
+func (g *baseGraph[V, E]) Comparator() comp.Comparator[V] {
+	return g.comparator
 }
 
 // GetVertices returns a slice of all vertices in the graph

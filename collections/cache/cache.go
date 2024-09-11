@@ -39,7 +39,7 @@ type Cache[K any] struct {
 func NewCache[K any](capacity int, policy OrderPolicy[K], comparator comp.Comparator[K]) *Cache[K] {
 	return &Cache[K]{
 		capacity:   capacity,
-		items:      maps.NewHashMap[K, *Item[K]](comparator),
+		items:      maps.NewHashMap[K, *Item[K]](comparator).Unwrap(),
 		policy:     policy,
 		comparator: comparator,
 	}
@@ -112,7 +112,7 @@ func (c *Cache[K]) Clear() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.items = maps.NewHashMap[K, *Item[K]](c.comparator)
+	c.items = maps.NewHashMap[K, *Item[K]](c.comparator).Unwrap()
 	c.policy = c.createNewPolicy()
 }
 
