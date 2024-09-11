@@ -33,12 +33,13 @@ import (
 	"github.com/ielm/neostd/collections/comp"
 	"github.com/ielm/neostd/collections/maps"
 	"github.com/ielm/neostd/errors"
+	"github.com/ielm/neostd/hash"
 	"github.com/ielm/neostd/res"
 )
 
 // Trie represents a generic trie data structure.
 type Trie[T any] struct {
-	*baseTree[string]
+	*BaseTree[string, T]
 	root *trieNode[T]
 }
 
@@ -51,8 +52,12 @@ type trieNode[T any] struct {
 
 // NewTrie creates a new Trie.
 func NewTrie[T any]() *Trie[T] {
+	hasher, err := hash.NewSipHasher()
+	if err != nil {
+		panic(err)
+	}
 	return &Trie[T]{
-		baseTree: newBaseTree(comp.GenericComparator[string](), nil),
+		BaseTree: NewBaseTree[string, T](comp.GenericComparator[string](), hasher),
 		root:     newTrieNode[T](),
 	}
 }
@@ -65,13 +70,13 @@ func newTrieNode[T any]() *trieNode[T] {
 }
 
 // Insert adds a word to the trie with an associated value.
-func (t *Trie[T]) Insert(word string, value T) error {
-	if word == "" {
+func (t *Trie[T]) Insert(key string, value T) error {
+	if key == "" {
 		return errors.New(errors.ErrInvalidArgument, "cannot insert empty string")
 	}
 
 	node := t.root
-	for _, ch := range word {
+	for _, ch := range key {
 		if child, exists := node.children.Get(ch); exists {
 			node = child
 		} else {
@@ -88,36 +93,9 @@ func (t *Trie[T]) Insert(word string, value T) error {
 	return nil
 }
 
-// Search checks if a word exists in the trie and returns its value.
-func (t *Trie[T]) Search(word string) (*T, bool) {
-	node := t.findNode(word)
-	if node != nil && node.isEnd {
-		return node.value, true
-	}
-	return nil, false
-}
-
-// StartsWith checks if any word in the trie starts with the given prefix.
-func (t *Trie[T]) StartsWith(prefix string) bool {
-	return t.findNode(prefix) != nil
-}
-
-// findNode is a helper method that finds the node corresponding to a given string.
-func (t *Trie[T]) findNode(s string) *trieNode[T] {
-	node := t.root
-	for _, ch := range s {
-		if child, exists := node.children.Get(ch); exists {
-			node = child
-		} else {
-			return nil
-		}
-	}
-	return node
-}
-
 // Delete removes a word from the trie.
-func (t *Trie[T]) Delete(word string) error {
-	if word == "" {
+func (t *Trie[T]) Delete(key string) error {
+	if key == "" {
 		return errors.New(errors.ErrInvalidArgument, "cannot delete empty string")
 	}
 
@@ -147,8 +125,74 @@ func (t *Trie[T]) Delete(word string) error {
 		return false
 	}
 
-	dfs(t.root, word, 0)
+	dfs(t.root, key, 0)
 	return nil
+}
+
+// Search checks if a word exists in the trie and returns its value.
+func (t *Trie[T]) Search(key string) (*Node[string, T], bool) {
+	node := t.findNode(key)
+	if node != nil && node.isEnd {
+		return &Node[string, T]{
+			Key:   key,
+			Value: *node.value,
+		}, true
+	}
+	return nil, false
+}
+
+// Traverse returns the words in the trie based on the given traversal order.
+func (t *Trie[T]) Traverse(order TraversalOrder) []collections.Pair[string, T] {
+	var result []collections.Pair[string, T]
+	var dfs func(node *trieNode[T], current []rune)
+	dfs = func(node *trieNode[T], current []rune) {
+		if node.isEnd {
+			result = append(result, collections.Pair[string, T]{
+				Key:   string(current),
+				Value: *node.value,
+			})
+		}
+		node.children.ForEach(func(ch rune, child *trieNode[T]) {
+			dfs(child, append(current, ch))
+		})
+	}
+	dfs(t.root, []rune{})
+	return result
+}
+
+// Root returns the root node of the trie.
+func (t *Trie[T]) Root() *Node[string, T] {
+	// Convert trieNode to Node
+	return &Node[string, T]{
+		Value:    *t.root.value,
+		Children: t.convertChildren(t.root),
+	}
+}
+
+// convertChildren is a helper method to convert trieNode children to Node children.
+func (t *Trie[T]) convertChildren(node *trieNode[T]) []*Node[string, T] {
+	var children []*Node[string, T]
+	node.children.ForEach(func(ch rune, child *trieNode[T]) {
+		children = append(children, &Node[string, T]{
+			Key:      string(ch),
+			Value:    *child.value,
+			Children: t.convertChildren(child),
+		})
+	})
+	return children
+}
+
+// findNode is a helper method that finds the node corresponding to a given string.
+func (t *Trie[T]) findNode(s string) *trieNode[T] {
+	node := t.root
+	for _, ch := range s {
+		if child, exists := node.children.Get(ch); exists {
+			node = child
+		} else {
+			return nil
+		}
+	}
+	return node
 }
 
 // Clear removes all words from the trie.

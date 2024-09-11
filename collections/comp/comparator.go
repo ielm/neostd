@@ -1,6 +1,8 @@
 package comp
 
-import "golang.org/x/exp/constraints"
+import (
+	"golang.org/x/exp/constraints"
+)
 
 // Comparator is a function type that compares two values
 // It returns a negative value if a < b, zero if a == b, and a positive value if a > b
@@ -71,4 +73,18 @@ func ByteSliceComparator(a, b []byte) int {
 		}
 	}
 	return len(a) - len(b)
+}
+
+// This is a duplicate of the Pair type in the collections package
+// TODO: Move this to a shared package
+type pair[K any, V any] struct {
+	Key   K
+	Value V
+}
+
+// Create a custom Comparator for Pair[K, V]
+func PairComparator[K any, V any](comp func(K, K) int) func(pair[K, V], pair[K, V]) int {
+	return func(a, b pair[K, V]) int {
+		return comp(a.Key, b.Key)
+	}
 }

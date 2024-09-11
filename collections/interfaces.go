@@ -75,7 +75,20 @@ type Set[T any] interface {
 }
 
 // Map represents a collection of key-value pairs
+//
+//	type Map[K comparable, V any] interface {
+//		Put(key K, value V) (V, bool)
+//		Get(key K) (V, bool)
+//		Remove(key K) (V, bool)
+//		ContainsKey(key K) bool
+//		Keys() []K
+//		Values() []V
+//		SetComparator(comp comp.Comparator[K])
+//	}
+
 type Map[K comparable, V any] interface {
+	Countable
+	Clearable
 	Put(key K, value V) (V, bool)
 	Get(key K) (V, bool)
 	Remove(key K) (V, bool)
@@ -83,6 +96,7 @@ type Map[K comparable, V any] interface {
 	Keys() []K
 	Values() []V
 	SetComparator(comp comp.Comparator[K])
+	Comparator() comp.Comparator[K]
 }
 
 // ProbabilisticSet represents a probabilistic set data structure

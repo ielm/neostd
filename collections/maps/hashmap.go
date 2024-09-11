@@ -442,6 +442,11 @@ func (h *HashMap[K, V]) SetComparator(comp comp.Comparator[K]) {
 	h.comparator = comp
 }
 
+// Comparator returns the comparator for the HashMap.
+func (h *HashMap[K, V]) Comparator() comp.Comparator[K] {
+	return h.comparator
+}
+
 // Type assertions
 var (
 	_ collections.Map[string, any]      = (*HashMap[string, any])(nil)
