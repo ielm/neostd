@@ -39,6 +39,7 @@ type Collection[T any] interface {
 	Remove(item T) bool
 	Contains(item T) bool
 	SetComparator(comp comp.Comparator[T])
+	Comparator() comp.Comparator[T]
 }
 
 // List represents an ordered collection
